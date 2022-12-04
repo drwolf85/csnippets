@@ -1,3 +1,4 @@
 *.so
 *.o
 *.dll
+/src/inzr_resid.c
