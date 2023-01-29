@@ -2,3 +2,5 @@
 *.o
 *.dll
 /src/inzr_resid.c
+/src/.*c
+/src/.*R
