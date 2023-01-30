@@ -88,13 +88,13 @@ void sort_reals_wid(double *x, size_t *idx, size_t n) {
 	uint8_t c;
 	uint64_t v;
 	size_t i, h[256], ch[256], *sid;
-    sid = (size_t *) malloc(n * sizeof(size_t));
+	sid = (size_t *) malloc(n * sizeof(size_t));
 	s = (double *) malloc(n * sizeof(double));
 	y = (double *) malloc(n * sizeof(double));
 
 	if (s && y && sid) {
 		//memcpy(s, x, n * sizeof(double));
-        negcpy(s, x, n, 0);
+    	negcpy(s, x, n, 0);
 		for (c = 0; c < sizeof(double); c++) {
 			memset(h,  0, 256 * sizeof(size_t));
 			memset(ch, 0, 256 * sizeof(size_t));
@@ -115,17 +115,17 @@ void sort_reals_wid(double *x, size_t *idx, size_t n) {
 				v >>= 8 * c;
 				v &= 255;
 				y[ch[v]] = s[i];
-                sid[ch[v]] = idx[i];
+        		sid[ch[v]] = idx[i];
 				ch[v]++;
-            }
+      		}
 			/* Copy to sorted vectors */
 			memcpy(s, y, n * sizeof(double));
-            memcpy(idx, sid, n * sizeof(size_t));
+      		memcpy(idx, sid, n * sizeof(size_t));
 		}
 		//memcpy(x, s, n * sizeof(double));
-        negcpy(x, s, n, 1);
+    	negcpy(x, s, n, 1);
 	}
-    free(sid);
+	free(sid);
 	free(s);
 	free(y);
 }
@@ -164,7 +164,7 @@ void sort_pos(double *s, size_t n) {
 				v &= 255;
 				y[ch[v]] = s[i];
 				ch[v]++;
-            }
+      		}
 			/* Copy to sorted vector */
 			memcpy(s, y, n * sizeof(double));
 		}
@@ -209,12 +209,12 @@ void sort_pos_wid(double *s, size_t *idx, size_t n) {
 				v >>= 8 * c;
 				v &= 255;
 				y[ch[v]] = s[i];
-                sid[ch[v]] = idx[i];
+        		sid[ch[v]] = idx[i];
 				ch[v]++;
-            }
+			}
 			/* Copy to sorted vector */
 			memcpy(s, y, n * sizeof(double));
-            memcpy(idx, sid, n * sizeof(size_t));
+			memcpy(idx, sid, n * sizeof(size_t));
 		}
 	}
 	free(sid);
@@ -225,10 +225,10 @@ void sort_pos_wid(double *s, size_t *idx, size_t n) {
 # define N 5
 int main() {
 	double x[N] = {84.7, -1.2, -45.2, 4.5, 0.2};
-    double s[N] = {84.7, 1.2, 45.2, 4.5, 0.2};
+	double s[N] = {84.7, 1.2, 45.2, 4.5, 0.2};
 	double y[N] = {84.7, -1.2, -45.2, 4.5, 0.2};
-    double z[N] = {84.7, 1.2, 45.2, 4.5, 0.2};
-    size_t idx[N];
+	double z[N] = {84.7, 1.2, 45.2, 4.5, 0.2};
+	size_t idx[N];
 
 	/* Sort real numbers */
 	sort_reals(y, N);
@@ -247,7 +247,7 @@ int main() {
 	sort_reals_wid(x, idx, N);
 	for (int i = 0; i < N; i++) {
 		printf("%f (%lu) ", x[i], idx[i]);
-        idx[i] = i;
+    idx[i] = i;
 	}
 	printf("\n");
 	/* Sort non-negative numbers with indices */
