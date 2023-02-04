@@ -4,6 +4,15 @@
 #include <string.h>
 #include <omp.h>
 
+/**
+ * The function `qrQR` takes a matrix `dta` of dimension `dim[0]` by `dim[1]` and returns the QR
+ * decomposition of `dta` in `q` and `r`
+ * 
+ * @param dta the data matrix
+ * @param dim the dimensions of the matrix
+ * @param q the q matrix
+ * @param r the upper triangular matrix
+ */
 void qrQR(double *dta, int *dim, double *q, double *r) {
     int i, j, k;
     double itmp, tmp, v;

@@ -4,6 +4,14 @@
 #include <string.h>
 #include <omp.h>
 
+/**
+ * The function `qrR` computes the QR decomposition of a matrix `dta` of dimension `dim` and stores
+ * the result in `r`
+ * 
+ * @param dta the data matrix
+ * @param dim the dimensions of the matrix
+ * @param r the output matrix
+ */
 void qrR(double *dta, int *dim, double *r) {
     int i, j, k;
     double itmp, tmp, v;

@@ -1,3 +1,10 @@
+/**
+ * The function `inverseUT` takes a square matrix `mat` and its dimension `n` as input, and returns
+ * the inverse of the upper triangular matrix `mat` in place
+ * 
+ * @param mat the matrix to be inverted
+ * @param nn the dimension of the matrix
+ */
 void inverseUT(double *mat, int *nn) {
     int i, j, k, pos, n = *nn;
     double tmp;

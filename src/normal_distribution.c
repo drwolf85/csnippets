@@ -1,6 +1,16 @@
 #include <stdio.h>
 #include <math.h>
 
+/**
+ * The function `dnorm` returns the value of the normal density function at `x` with mean `m` and
+ * standard deviation `s`
+ * 
+ * @param x the value we're evaluating the PDF at
+ * @param m mean
+ * @param s standard deviation
+ * 
+ * @return The probability of x given the mean and standard deviation.
+ */
 double dnorm(double x, double m, double s) {
     double z = x - m;
     z /= s; 
@@ -9,6 +19,16 @@ double dnorm(double x, double m, double s) {
     return z;
 }
 
+/**
+ * The function `pnorm` returns the probability that a random variable from a normal distribution
+ * with mean `m` and standard deviation `s` is less than or equal to `x`
+ * 
+ * @param x the value of the random variable
+ * @param m mean
+ * @param s standard deviation
+ * 
+ * @return The probability of a random variable being less than or equal to x.
+ */
 double pnorm(double x, double m, double s) {
     double z = x - m;
     z /= s * sqrt(2.0); 
@@ -16,6 +36,16 @@ double pnorm(double x, double m, double s) {
     return z;
 }
 
+/**
+ * It takes a probability, a mean, and a standard deviation, and returns the value of the normal
+ * distribution at that probability
+ * 
+ * @param p the probability of the event
+ * @param m mean
+ * @param s standard deviation
+ * 
+ * @return The quantile function of the normal distribution.
+ */
 double qnorm(double p, double m, double s) {
     double old;
     double z = 0.25 * log(p / (1.0 - p)); /* Initial approximation */

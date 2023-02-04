@@ -5,12 +5,12 @@
 #include <omp.h>
 
 /**
-@brief Residuals of a linear model (based on OLS)
-@param res empty vector to store the residuals (in output)
-@param y response vector (example data for model output)
-@param dta matrix of data (column-major format)
-@param dim vector of dimension of `dta` matrix
-*/
+ * @brief Residuals of a linear model (based on OLS)
+ * @param res empty vector to store the residuals (in output)
+ * @param y response vector (example data for model output)
+ * @param dta matrix of data (column-major format)
+ * @param dim vector of dimension of `dta` matrix 
+ */
 void lm_resid(double *res, double *y, double *dta, int *dim) {
     int i, j, k;
     double itmp, tmp, v;

@@ -1,3 +1,9 @@
+/**
+ * It takes a matrix and returns the outer product of the matrix with itself
+ * 
+ * @param mat a pointer to the first element of the matrix
+ * @param nn the number of rows and columns of the matrix
+ */
 void outer_prod_UpperTri(double *mat, int *nn) {
     int i, j, k, n = *nn;
     double tmp;

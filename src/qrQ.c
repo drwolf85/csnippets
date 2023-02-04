@@ -3,6 +3,14 @@
 #include <stdlib.h>
 #include <omp.h>
 
+/**
+ * The function `qrQ` computes the matrix $ of the QR decomposition of a matrix $ using the
+ * Gram-Schmidt orthogonalization process
+ * 
+ * @param dta the data matrix
+ * @param dim the dimensions of the matrix
+ * @param q the matrix of orthonormal vectors
+ */
 void qrQ(double *dta, int *dim, double *q) {
     int i, j, k;
     double tmp, v;

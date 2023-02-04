@@ -6,6 +6,13 @@
 
 #define MAX_ITER 10
 
+/**
+ * The function `inverseUT` takes a square matrix `mat` and its dimension `n` as input, and returns the
+ * inverse of the upper triangular matrix `mat` in place
+ * 
+ * @param mat the matrix to be inverted
+ * @param nn the number of rows and columns in the matrix
+ */
 void inverseUT(double *mat, int *nn) {
     int i, j, k, pos, n = *nn;
     double tmp;
@@ -22,6 +29,12 @@ void inverseUT(double *mat, int *nn) {
     }
 }
 
+/**
+ * It computes the outer product of a matrix with itself.
+ * 
+ * @param mat the matrix to be transformed
+ * @param nn the number of rows and columns in the matrix
+ */
 void outer_prod_UT(double *mat, int *nn) {
     int i, j, k, n = *nn;
     double tmp;
@@ -41,6 +54,16 @@ void outer_prod_UT(double *mat, int *nn) {
     }
 }
 
+/**
+ * The function `lm_coef` computes the regression coefficients of a linear model using the QR
+ * decomposition
+ * 
+ * @param coef the coefficients of the regression
+ * @param y the response variable
+ * @param dta the data matrix, with each row being a sample and each column being a feature.
+ * @param dim a vector of length 2, where dim[0] is the number of observations and dim[1] is the number
+ * of variables.
+ */
 void lm_coef(double *coef, double *y, double *dta, int *dim) {
     int i, j, k;
     double itmp, tmp, v;
