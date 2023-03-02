@@ -92,7 +92,7 @@ double qbinom(double p, int n, double prob) {
                 break;
             }
         }
-        z = (double) (i - 1);    
+        z = (double) i;
     }
     return z;
 }
@@ -109,15 +109,15 @@ double qbinom(double p, int n, double prob) {
  */
 double rbinom(int n, double prob) {
     int i;
-    unsigned long u, m;
+    unsigned long u;
+    unsigned long const m = ~(1 << 31);
     double z = nan("");
     if (n >= 0 && prob >= 0.0 && prob <= 1.0) {
         z = 0.0;
         for (i = 0; i < n; i++) {
             u = rand();
-            m = ~(1 << 31);
             u &= m;
-            z += (double) (ldexp((double) u, -31) <= prob);        
+            z += (double) (ldexp((double) u, -31) < prob);
         }
     }
     return z;
@@ -135,7 +135,7 @@ int main() {
     printf("x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
     /* Main function to test the random generation of a Binomial variable */
     for (int i = 1; i <= 40; i++) {
-        tmp = rbinom(5, 0.678);
+        tmp = rbinom(5, 0.234);
         if (tmp >= 0.0) printf(" ");
         printf("%1.f\t", tmp);
         if (i % 5 == 0) printf("\n");
