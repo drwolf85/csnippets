@@ -163,15 +163,17 @@ void k_means(kmp *par, double *data, size_t n, size_t p, size_t k, size_t max_it
         default:
             if (param_check(par, k, p)) { /* Initialize parameters */
                 if (par) if (par->n && par->m) for (h = 0; h < k; h++) { 
-                    /* Randomly pick a point for each group */
+                    /** FIXME: It currently pick a point for each group at random 
+                               There are other initialization criteria...
+                        TODO: Generalize the initialization! */
                     i = (size_t) rand() % n;
                     #pragma omp for simd
                     for (j = 0; j < p; j++) {
                         par->m[p * h + j] = data[n * j + i];
                     }
                 }
-                /* WARNING: The following loop MUST BE sequential, 
-                            DO NOT make it parallel! */
+                /** WARNING: The following loop MUST BE sequential, 
+                             DO NOT make it parallel! */
                 for (i = 0; i < max_iter; i++) update_mwi(par, data, n);
             }
             break;
