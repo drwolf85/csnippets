@@ -6,6 +6,7 @@
 /src/.*R
 .*c
 .*R
+/src/.*
 
 github
 
