@@ -104,20 +104,20 @@ size_t which_group(kmp *par, double *data, size_t n, size_t i) {
 
 void update_mwi(kmp *par, double *data, size_t n) {
     size_t i, j, g;
-    size_t *cnts = (size_t *) calloc(par->k, sizeof(size_t));
+    size_t *counts = (size_t *) calloc(par->k, sizeof(size_t));
     double tmp;
-    if (par && data && cnts) {
+    if (par && data && counts) {
         memset(par->m, 0, sizeof(double) * par->p * par->k);
         for (i = 0; i < n; i++) {
             g = which_group(par, data, n, i);
             for (j = 0; j < par->p; j++) {
                 par->m[par->p * g + j] += data[n * j + i];
             }
-            cnts[g]++;
+            counts[g]++;
         }
         for (g = 0; g < par->k; g++) {
-            if (cnts[g]) {
-                tmp = 1.0 / (double) cnts[g];
+            if (counts[g]) {
+                tmp = 1.0 / (double) counts[g];
                 #pragma omp for simd
                 for (j = 0; j < par->p; j++) {
                     par->m[par->p * g + j] *= tmp;
@@ -125,7 +125,7 @@ void update_mwi(kmp *par, double *data, size_t n) {
             }
         }
     }
-    free(cnts);
+    free(counts);
 }
 
 /**
