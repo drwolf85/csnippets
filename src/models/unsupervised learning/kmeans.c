@@ -7,7 +7,7 @@
 #include <omp.h>
 #include <time.h>
 
-typedef struct {
+typedef struct kmp {
     size_t k;
     size_t p;
     size_t *n;

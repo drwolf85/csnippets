@@ -23,7 +23,7 @@
  * `W` and `b` in the `params` struct. It is used to keep track of the number of weights and
  * biases in a neural network model.
  */
-typedef struct {
+typedef struct params {
     double *W;
     double *b;
     size_t sz;

@@ -39,7 +39,7 @@ void arithmetic_average_online(double *avg, size_t *n, double x) {
     if (*n > 0) {
         tmp = 1.0 / (double) (*n + 1);
         *avg = x * tmp + *avg * ((double) *n * tmp); 
-        *n++;
+        *n += 1;
     }
     else {
         *n = 1;
@@ -111,7 +111,7 @@ void geometric_average_online(double *avg, size_t *n, double x) {
         *avg *= (double) *n * tmp;
         *avg += log(x) * tmp;
         *avg = exp(*avg);
-        *n++;
+        *n += 1;
     }
     else {
         *n = 1;
@@ -158,7 +158,7 @@ void harmonic_average_online(double *avg, size_t *n, double x) {
         *avg *= (double) *n * tmp;
         *avg += tmp / x;
         *avg = 1.0 / *avg;
-        *n++;
+        *n += 1;
     }
     else {
         *n = 1;
@@ -211,7 +211,7 @@ void generalized_average_online(double *avg, size_t *n, double x, double (*fun)(
         *avg *= (double) *n * tmp;
         *avg += (*fun)(x) * tmp;
         *avg = (*invfun)(*avg);
-        *n++;
+        *n += 1;
     }
     else {
         *n = 1;

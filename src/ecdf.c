@@ -93,7 +93,7 @@ void ecdf_double(double *y, double *x, size_t n) {
     double const inp1 = 1.0 / (double) n;
     
     idx = (size_t *) malloc(n * sizeof(size_t));
-    v = (int64_t *) malloc(n * sizeof(int64_t));
+    v = (uint64_t *) malloc(n * sizeof(int64_t));
 
     if (idx && v) {
         for (i = 0; i < n; i++) {
@@ -129,42 +129,6 @@ double int_ecdf(double y, int *x, size_t n) {
         c += (size_t) (y < (double) x[i]);
     }
     return res * c;
-}
-
-/**
- * @brief Empirical cumulative distribution function (for real numbers)
- * 
- * @param y empty vector where to store the results
- * @param x vector of real numbers (data)
- * @param n length of the two vectors described above
- */
-void ecdf_double(double *y, double *x, size_t n) {
-    size_t i, c, *idx;
-    double z;
-    uint64_t *v;
-    double const inp1 = 1.0 / (double) n;
-    
-    idx = (size_t *) malloc(n * sizeof(size_t));
-    v = (int64_t *) malloc(n * sizeof(int64_t));
-
-    if (idx && v) {
-        for (i = 0; i < n; i++) {
-            idx[i] = i; /* Initialize the indices */
-            z = -(x[i] >= 0.0 ? x[i] : 1.0 / x[i]); /* Fix the order for IEEE format */
-            v[i] = *((uint64_t *) &z); /* Copy data into temporary vector */
-        }
-        sort_index(idx, v, n); /* sort the vector of indices*/
-        for (i = 0; i < n; i++) { /* Compute the ECDF */
-            for (c = 0; i + c < n; c++) /* Check for duplicate values */
-                if (v[idx[i]] != v[idx[i+c]]) break;
-            for (c += i; i < c; i++) {
-                    y[idx[i]] = inp1 * (double) c;
-            }
-            i--;
-        }
-    }
-    free(idx);
-    free(v);
 }
 
 /**

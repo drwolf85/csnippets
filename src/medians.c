@@ -9,7 +9,7 @@
  * @property {double} v - The value of the item
  * @property {double} w - The weight of the item
  */
-typedef struct {
+typedef struct dta_vec {
     double v; /* Values */
     double w; /* Weights */
 } dta_vec;
@@ -103,7 +103,7 @@ double weighted_median(double *x, double *w, size_t n) {
  * @property {double} w - the weight of the value
  * @property {size_t} i - the index of the entry in the original array
  */
-typedef struct {
+typedef struct vector {
     double v;
     double w;
     size_t i;

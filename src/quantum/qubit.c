@@ -4,12 +4,16 @@
 #include <complex.h>
 #include <time.h>
 
+#ifndef CMPLX
+# define CMPLX(x, y) ((x) + (y) * I)
+#endif
+
 /**
  * The qubit type represents a complex value.
  * @property {complex} value - The `value` property is a pointer to a `complex` data type.
  */
-typedef struct {
-    complex *value;
+typedef struct qubit {
+    complex double *value;
 } qubit;
 
 /**
@@ -22,7 +26,7 @@ qubit * qubit_init() {
     double tmp;
     qubit *q = (qubit *) calloc(1, sizeof(qubit));
     if (q) {
-        q->value = (complex *) calloc(2, sizeof(complex));
+        q->value = (complex double *) calloc(2, sizeof(complex double));
         if (q->value) {
             u = rand() & m;
             tmp = ldexp((double) u, -30) * M_PI;
@@ -51,7 +55,7 @@ void qubit_free(qubit *q) {
  * @param q The parameter `q` is a pointer to a qubit structure.
  */
 void quantum_not(qubit *q) {
-    complex a;
+    complex double a;
     if (q) if (q->value) {
         a = q->value[0];    
         q->value[0] = q->value[1];
@@ -88,7 +92,7 @@ void pauli_X(qubit *q) {
  * @param q The parameter `q` is a pointer to a `qubit` structure.
  */
 void pauli_Y(qubit *q) {
-    complex a;
+    complex double a;
     if (q) if (q->value) {
         a = q->value[0] * CMPLX(0.0, 1.0);
         q->value[0] = q->value[1] * CMPLX(0.0, -1.0);
@@ -114,7 +118,7 @@ void pauli_Z(qubit *q) {
  * @param q The parameter "q" is a pointer to a qubit structure.
  */
 void sqrt_not(qubit *q) {
-    complex a, b;
+    complex double a, b;
     if (q) if (q->value) {
         a = CMPLX(0.5, 0.5) * q->value[0] + CMPLX(0.5, -0.5) * q->value[1];
         b = CMPLX(0.5, -0.5) * q->value[0] - CMPLX(0.5, 0.5) * q->value[1];
@@ -129,7 +133,7 @@ void sqrt_not(qubit *q) {
  * @param q The parameter `q` is a pointer to a `qubit` structure.
  */
 void hadamard(qubit *q) {
-    complex a, b;
+    complex double a, b;
     double const m_isqrt2 = sqrt(0.5);
     if (q) if (q->value) {
         a = (q->value[0] + q->value[1]) * m_isqrt2;
@@ -147,7 +151,7 @@ void hadamard(qubit *q) {
  * used to rotate the state of a qubit around the X-axis on the Bloch sphere.
  */
 void r_x(qubit *q, double alpha) {
-    complex a, b;
+    complex double a, b;
     double const c = cos(alpha * 0.5);
     double const s = sin(alpha * 0.5);
     if (q) if (q->value) {
@@ -167,7 +171,7 @@ void r_x(qubit *q, double alpha) {
  * angle, respectively. These values are then used to perform a rotation operation on the qubit
  */
 void r_y(qubit *q, double alpha) {
-    complex a, b;
+    complex double a, b;
     double const c = cos(alpha * 0.5);
     double const s = sin(alpha * 0.5);
     if (q) if (q->value) {
@@ -204,7 +208,7 @@ void r_z(qubit *q, double alpha) {
  * amount by which the phase of the qubit is shifted.
  */
 void phase_shift(qubit *q, double delta) {
-    complex const eid = cexp(CMPLX(0.0, delta));
+    complex double const eid = cexp(CMPLX(0.0, delta));
     if (q) if (q->value) {
         q->value[0] *= eid;
         q->value[1] *= eid;

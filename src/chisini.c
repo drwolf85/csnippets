@@ -15,7 +15,7 @@
  * @property {size_t} i - `i` is a member variable of the `vec` struct and its data type is `size_t`.
  * It is used to store the index of a vector element.
  */
-typedef struct {
+typedef struct vec {
     double v;
     size_t i;
 } vec;

@@ -4,7 +4,7 @@
 #include <math.h>
 #include <omp.h>
 
-typedef struct {
+typedef struct dst_vec {
     double v;
     size_t i;
 }

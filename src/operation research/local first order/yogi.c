@@ -9,7 +9,7 @@
 
 /**
  * It computes the gradient of the objective function, updates the momentum and the second order
- * momentum, and then updates the parameters using the Yogi Algorihtm
+ * momentum, and then updates the parameters using the Yogi Algorithm
  * 
  * @param param the parameters to be optimized
  * @param len the length of the parameter vector

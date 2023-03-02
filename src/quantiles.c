@@ -95,7 +95,7 @@ double range(double *x, size_t n) {
  * @property {double} v - the value of the element
  * @property {size_t} i - the index of the value in the original array
  */
-typedef struct {
+typedef struct values {
     double v;
     size_t i;
 } values;
