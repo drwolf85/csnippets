@@ -144,7 +144,7 @@ double ncd_lzma(void *x, size_t __mem_x, size_t __size_x,
     return res;
 }
 
-/* Test function 
+/* Test function
 Compile with gcc `ncd.c -Os -march=native -lm -lz -llzma`
 */
 int main() {
@@ -152,18 +152,18 @@ int main() {
     char y[] = "I have had a conversation with your talented friend.";
     char z[] = "No amount of wisdom, as I said before, ever banishes these things...";
     size_t nx = strlen(x);
-    size_t ny = strlen(y);
-    double dst = ncd_z(x, nx, sizeof(char), y, ny, sizeof(char));
+    size_t ny = strlen(z);
+    double dst = ncd_z(x, nx, sizeof(char), y, nx, sizeof(char));
     printf("Approximation of the Kolmogorov complexity using `libz`:\n");
     printf("\tDistance between:\n\t- %s\n\t- %s\n\tis %f\n", x, y, dst);
-    dst = ncd_z(x, nx, sizeof(char), z, nx, sizeof(char));
+    dst = ncd_z(x, nx, sizeof(char), z, ny, sizeof(char));
     printf("\tDistance between:\n\t- %s\n\t- %s\n\tis %f\n", x, z, dst);
 
-    #include "../.data/iris.h"
+    #include "../../.data/iris.h"
     nx = N * P;
     dst = ncd_z(x_iris, nx, sizeof(double), x_iris, nx, sizeof(double));
     printf("\tDistance between (iris, iris) is %f\n", dst);
-    printf("---\nApproximation of the Kolmogorov complexity using `liblzma`:\n");
+
     dst = ncd_lzma(x_iris, nx, sizeof(double), x_iris, nx, sizeof(double));
     printf("\tDistance between (iris, iris) is %f\n", dst);
     return 0;
