@@ -4,7 +4,11 @@
 #include <omp.h>
 
 #define EPS_TOLL 1e-10
-
+/**
+ * A values is a struct with a `double` and a `size_t`.
+ * @property {double} v - the value of the element
+ * @property {size_t} i - the index of the value in thFixxie original array
+ */
 typedef struct {
     double v;
     size_t i;
