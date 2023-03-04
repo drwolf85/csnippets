@@ -2,6 +2,7 @@
     "files.associations": {
         "*.embeddedhtml": "html",
         "math.h": "c",
-        "random": "c"
+        "random": "c",
+        "omp.h": "c"
     }
 }
