@@ -3,6 +3,7 @@
         "*.embeddedhtml": "html",
         "math.h": "c",
         "random": "c",
-        "omp.h": "c"
+        "omp.h": "c",
+        "vector": "c"
     }
 }
