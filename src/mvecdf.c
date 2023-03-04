@@ -7,7 +7,7 @@
 /**
  * A values is a struct with a `double` and a `size_t`.
  * @property {double} v - the value of the element
- * @property {size_t} i - the index of the value in thFixxie original array
+ * @property {size_t} i - the index of the value in the original array
  */
 typedef struct {
     double v;
