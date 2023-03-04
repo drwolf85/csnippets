@@ -4,12 +4,12 @@
 #include <string.h>
 
 /**
-@brief "Negative copy"
-@param dest Destination vector (double)
-@param src Source vector (double)
-@param n length of the two vectors above (size_t)
-@param sgn Character determining how to treat negative numbers
-*/
+ * @brief "Negative copy"
+ * @param dest Destination vector (double)
+ * @param src Source vector (double)
+ * @param n length of the two vectors above (size_t)
+ * @param sgn Character determining how to treat negative numbers
+ */
 void negcpy(double *dest, double *src, size_t n, char sgn) {
     size_t i;
     if (sgn) { /* Part to execute at the end when `sgn != 0` */
@@ -29,10 +29,10 @@ void negcpy(double *dest, double *src, size_t n, char sgn) {
 }
 
 /**
-@brief Sorting a vector of real number (from smallest to largest)
-@param x Vector of real numbers (double)
-@param n length of the vector above (size_t)
-*/
+ * @brief Sorting a vector of real number (from smallest to largest)
+ * @param x Vector of real numbers (double)
+ * @param n length of the vector above (size_t)
+ */
 void sort_reals(double *x, size_t n) {
     double *s, *y;
     uint8_t c;
@@ -77,12 +77,12 @@ void sort_reals(double *x, size_t n) {
 }
 
 /**
-@brief Sorting a vector of real number (from
-       smallest to largest) with indexes
-@param x Vector of real numbers (double)
-@param idx Vector of indices (integer numbers, size_t)
-@param n length of the vector above (size_t)
-*/
+ * @brief Sorting a vector of real number (from
+ *        smallest to largest) with indexes
+ * @param x Vector of real numbers (double)
+ * @param idx Vector of indices (integer numbers, size_t)
+ * @param n length of the vector above (size_t)
+ */
 void sort_reals_wid(double *x, size_t *idx, size_t n) {
     double *s, *y;
     uint8_t c;
@@ -131,10 +131,10 @@ void sort_reals_wid(double *x, size_t *idx, size_t n) {
 }
 
 /**
-@brief Sorting a vector of non-negative numbers (from smallest to largest)
-@param x Vector of real non-negative numbers (double)
-@param n length of the vector above (size_t)
-*/
+ * @brief Sorting a vector of non-negative numbers (from smallest to largest)
+ * @param x Vector of real non-negative numbers (double)
+ * @param n length of the vector above (size_t)
+ */
 void sort_pos(double *s, size_t n) {
     double *y;
     uint8_t c;
@@ -173,12 +173,12 @@ void sort_pos(double *s, size_t n) {
 }
 
 /**
-@brief Sorting a vector of non-negative number (from
-       smallest to largest) with indexes
-@param x Vector of non-negative numbers (double)
-@param idx Vector of indices (integer numbers, size_t)
-@param n length of the vector above (size_t)
-*/
+ * @brief Sorting a vector of non-negative number (from
+ *        smallest to largest) with indexes
+ * @param x Vector of non-negative numbers (double)
+ * @param idx Vector of indices (integer numbers, size_t)
+ * @param n length of the vector above (size_t)
+ */
 void sort_pos_wid(double *s, size_t *idx, size_t n) {
     double *y;
     uint8_t c;
