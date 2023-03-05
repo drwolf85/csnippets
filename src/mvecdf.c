@@ -51,9 +51,11 @@ void mvecdf(double *pr, double *x, size_t n, size_t p) {
     size_t i, j;
     double const invn = 1.0 / (double) n;
     values *v;
+    size_t *o;
 
     v = (values *) malloc(n * p * sizeof(values));
-    if (v) {
+    o = (size_t *) malloc(n * p * sizeof(size_t));
+    if (v && o) {
         /* Organize the data of a matrix in a stracture values */
         #pragma omp parallel for private(i, j) collapse(2)
         for (j = 0; j < p; j++) {
@@ -66,21 +68,29 @@ void mvecdf(double *pr, double *x, size_t n, size_t p) {
         #pragma omp parallel for private(j)
         for (j = 0; j < p; j++)
             qsort(&v[j * n], n, sizeof(values), cmp_values);
+        /* Set indexes in each column of an "order" matrix */
+        #pragma omp parallel for private(i, j) collapse(2)
+        for (j = 1; j < p; j++) {
+            for (i = 0; i < n; i++) {
+                o[n * j + v[n * j + i].i] = i;
+            }
+        }
         /* Find the minimum index among the columns of the matrix */
         #pragma omp parallel for private(i, j)
         for (i = 0; i < n; i++) {
             for (j = 1; j < p; j++) {
-                if (v[i].i > v[n * j + i].i) {
-                    v[i].i = v[n * j + i].i;
+                if (o[i] > o[n * j + i]) {
+                    o[i] = o[n * j + i];
                 }
             }
         }
         /* Compute cumulative distribution function */
         #pragma omp parallel for private(i)
         for (i = 0; i < n; i++) {
-            pr[i] = 0.5 + (double) v[i].i;
+            pr[i] = 0.5 + (double) o[i];
             pr[i] *= invn;
         }
     }
     free(v);
+    free(o);
 }
