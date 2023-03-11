@@ -12,7 +12,7 @@ double *mom_s;
 
 /**
  * It computes the gradient of the objective function, updates the momentum and the second order
- * momentum, and then updates the parameters using the Adam algorithm with the Yogi update
+ * momentum, and then updates the parameters using the Yogi Algorihtm
  * 
  * @param param the parameters to be optimized
  * @param len the length of the parameter vector
@@ -20,7 +20,7 @@ double *mom_s;
  * @param info a pointer to a structure that contains the data and other information
  * @param grad a pointer to a routine that computes the gradient of the objective function
  */
-void adam_yogi(double *param, int *len, int *n_iter, void *info,
+void yogi(double *param, int *len, int *n_iter, void *info,
                void *(grad)(double *, double *, int *, void *)) {
     int t, i, np = *len;
     double sc_m, sc_s, sgn;
