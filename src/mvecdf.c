@@ -46,8 +46,10 @@ int cmp_values(void *aa, void *bb) {
  * @param x a matrix of size `n` x `p`
  * @param n number of rows (or samples)
  * @param p number of columns in the matrix (or variables)
+ * 
+ * @return a pointer to an array of `size_t` with the order of 
  */
-void mvecdf(double *pr, double *x, size_t n, size_t p) {
+size_t * mvecdf(double *pr, double *x, size_t n, size_t p) {
     size_t i, j;
     double const invn = 1.0 / (double) n;
     values *v;
@@ -90,7 +92,22 @@ void mvecdf(double *pr, double *x, size_t n, size_t p) {
             pr[i] = 0.5 + (double) o[i];
             pr[i] *= invn;
         }
+        /* Prepaaring the data for a returning pointer of size `n` */
+        v = (values *) realloc(v, n * sizeof(values));
+        o = (size_t *) realloc(o, n * sizeof(size_t));
+        /* Sorting the values of the vector `pr` and storing the indexes in `v` */
+        #pragma omp parallel for private(i)
+        for (i = 0; i < n; i++) {
+            v[i].v = pr[i];
+            v[i].i = i;
+        }
+        qsort(v, n, sizeof(values), cmp_values);
+        /* Copy hte indices indexes in `o` */
+        #pragma omp parallel for private(i)
+        for (i = 0; i < n; i++) {
+            o[i] = v[i].i;
+        }
     }
     free(v);
-    free(o);
+    return o;
 }
