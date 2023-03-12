@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <math.h>
+#include <omp.h>
 
 #define LEARNING_RATE 0.001
 #define BETA_1 0.9

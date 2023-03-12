@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <math.h>
+#include <omp.h>
 
 #define LEARNING_RATE 0.001
 #define EPSILON 1e-6
