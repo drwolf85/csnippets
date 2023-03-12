@@ -2,9 +2,6 @@
 #include <math.h>
 #include <omp.h>
 
-double *mom_m;
-double *mom_s;
-
 #define LEARNING_RATE 0.001
 #define BETA_1 0.9
 #define BETA_2 0.999
@@ -25,8 +22,10 @@ void yogi(double *param, int *len, int *n_iter, void *info,
     int t, i, np = *len;
     double sc_m, sc_s, sgn;
     double *grd_v;
+    double *mom_m;
+    double *mom_s;
 
-    grd_v = (double *) calloc(np, sizeof(double));
+    grd_v = (double *) malloc(np * sizeof(double));
     mom_m = (double *) calloc(np, sizeof(double));
     mom_s = (double *) calloc(np, sizeof(double));
     if (mom_m && mom_s && grd_v) {
