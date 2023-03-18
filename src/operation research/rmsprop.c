@@ -14,10 +14,10 @@
  * @param len the length of the parameter vector
  * @param n_iter number of iterations
  * @param info a pointer to a structure that contains the data and other information
- * @param grad a pointer to a routine that computes the gradient of the objective function
+ * @param grad a routine that computes the gradient of the objective function
  */
 void rmsprop(double *param, int *len, int *n_iter, void *info,
-          void *(grad)(double *, double *, int *, void *)) {
+          void (grad)(double *, double *, int *, void *)) {
     int t, i, np = *len;
     double *grd_v;
     double *mom_s;
