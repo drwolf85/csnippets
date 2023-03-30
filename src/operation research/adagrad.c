@@ -16,7 +16,7 @@
  * @param grad a pointer to a routine that computes the gradient of the objective function
  */
 void adagrad(double *param, int *len, int *n_iter, void *info,
-          void *(grad)(double *, double *, int *, void *)) {
+          void (*grad)(double *, double *, int *, void *)) {
     int t, i, np = *len;
     double *grd_v;
     double *mom_s;
@@ -26,7 +26,7 @@ void adagrad(double *param, int *len, int *n_iter, void *info,
     if (mom_s && grd_v) {
         for (t = 0; t < *n_iter; t++) {
             /* Update the gradient */
-            grad(grd_v, param, len, info);
+            (*grad)(grd_v, param, len, info);
             /* Scaling factors */
             #pragma omp parallel for simd
             for (i = 0; i < np; i++) {
