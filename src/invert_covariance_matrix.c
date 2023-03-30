@@ -3,6 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * It computes the outer product of a triangular matrix with itself
+ * 
+ * @param mat the matrix to be transformed
+ * @param nn the number of rows and columns in the matrix
+ */
 void outer_prod_UpperTri(double *mat, int *nn) {
     int i, j, k, n = *nn;
     double tmp;
@@ -22,6 +28,12 @@ void outer_prod_UpperTri(double *mat, int *nn) {
     }
 }
 
+/**
+ * It takes the upper triangular part of a square matrix and inverts it
+ * 
+ * @param mat the matrix to be inverted
+ * @param nn the number of rows and columns in the matrix
+ */
 void inverseUT(double *mat, int *nn) {
     int i, j, k, pos, n = *nn;
     double tmp;
@@ -38,6 +50,12 @@ void inverseUT(double *mat, int *nn) {
     }
 }
 
+/**
+ * It takes a symmetric matrix and returns the Cholesky decomposition of it
+ * 
+ * @param mat the covariance matrix
+ * @param nn the number of rows and columns in the matrix
+ */
 void cholCovMat(double *mat, int *nn) {
     int i, j, k;
     double tmp;

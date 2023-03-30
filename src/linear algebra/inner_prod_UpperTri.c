@@ -1,3 +1,9 @@
+/**
+ * It computes the inner product of a matrix with itself.
+ * 
+ * @param mat a pointer to the matrix
+ * @param nn the number of rows/columns in the matrix
+ */
 void inner_prod_UpperTri(double *mat, int *nn) {
     int i, j, k, n = *nn;
     double tmp;

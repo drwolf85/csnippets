@@ -6,6 +6,13 @@
 
 #define MAX_ITER 10
 
+/**
+ * > The function `inverseUT` takes a square matrix `mat` and its dimension `n` as input, and returns
+ * the inverse of the upper triangular matrix `mat` in place
+ * 
+ * @param mat the matrix to be inverted
+ * @param nn the dimension of the matrix
+ */
 void inverseUT(double *mat, int *nn) {
     int i, j, k, pos, n = *nn;
     double tmp;
@@ -22,6 +29,12 @@ void inverseUT(double *mat, int *nn) {
     }
 }
 
+/**
+ * It computes the outer product of a matrix with itself, but only the upper triangle of the result
+ * 
+ * @param mat a pointer to the first element of the matrix
+ * @param nn the number of rows and columns in the matrix
+ */
 void outer_prod_UT(double *mat, int *nn) {
     int i, j, k, n = *nn;
     double tmp;
@@ -41,6 +54,16 @@ void outer_prod_UT(double *mat, int *nn) {
     }
 }
 
+/**
+ * > The function `lm_coef` computes the regression coefficients of a linear model using the QR
+ * decomposition of the design matrix
+ * 
+ * @param coef the coefficients of the regression
+ * @param y the response variable
+ * @param dta the data matrix, with each row being a sample and each column being a feature.
+ * @param dim a vector of length 2, where dim[0] is the number of observations and dim[1] is the number
+ * of variables.
+ */
 void lm_coef(double *coef, double *y, double *dta, int *dim) {
     int i, j, k;
     double itmp, tmp, v;
@@ -98,15 +121,15 @@ void lm_coef(double *coef, double *y, double *dta, int *dim) {
 }
 
 /**
-@brief Logistic (linear) Regression
+@brief Poisson (linear) Regression
 @param coef empty vector to store the output
 @param py response vector (example data for model output)
 @param pdta matrix of data (column-major format)
 @param dim vector of dimension of `dta` matrix
 */
-void logis_coef(double *coef, double *py, double *pdta, int *dim) {
+void poiss_coef(double *coef, double *py, double *pdta, int *dim) {
     int i, j, k, count = 0;
-    double itmp, tmp, v, err = INFINITY, orr = 0.0;
+    double itmp, tmp, v;
     double *q, *r, *y, *w, *dta, *jcb;
     double const nc = 1.0 / dim[0];
 
@@ -121,7 +144,7 @@ void logis_coef(double *coef, double *py, double *pdta, int *dim) {
     if (q && r && y && w && dta && jcb) {
         /* Find initial guess via OLS */
         for (i = 0; i < dim[0]; i++) {
-            y[i] = 4.0 * py[i] - 2.0;
+            y[i] = py[i] > 1.0 ? log(py[i]) : py[i] - 1.0;
         }
         lm_coef(coef, y, pdta, dim);
         do {
@@ -131,9 +154,8 @@ void logis_coef(double *coef, double *py, double *pdta, int *dim) {
                 for (i = 0; i < dim[1]; i++) {
                     y[j] += coef[i] * pdta[dim[0] * i + j];
                 }
-                w[j] = 1.0 / (1.0 + exp(-y[j]));
-                y[j] = py[j] - w[j];
-                w[j] = sqrt(w[j] * (1.0 - w[j]));
+                w[j] = exp(0.5 * y[j]);
+                y[j] = py[j] - w[j] * w[j];
                 for (i = 0; i < dim[1]; i++)
                     dta[dim[0] * i + j] = w[j] * pdta[dim[0] * i + j];
             }
@@ -194,12 +216,14 @@ void logis_coef(double *coef, double *py, double *pdta, int *dim) {
 }
 
 // set.seed(0)
-// n <- 200000L
-// p <- 25L
-// X <- matrix(rnorm(n * p), n, p)
-// y <- as.double((X %*% rnorm(p, 1) + rnorm(n, 0, 1)) > 0)
+// n <- 1000L
+// p <- 4L
+// X <- matrix(runif(n * p), n, p)
+// tp <- rnorm(p, 1)
+// y <- as.double(rpois(n, exp(X %*% tp)))
 // dyn.load("test.so")
-// system.time(b <- .C("logis_coef", coef = double(p), y, X, dim(X), DUP = FALSE)$coef)
-// system.time(print(cc <- glm(y ~ 0 + X, family = "binomial")$coef, digit = 22))
+// system.time(b <- .C("poiss_coef", coef = double(p), y, X, dim(X), DUP = FALSE)$coef)
+// system.time(print(cc <- glm(y ~ 0 + X, family = "poisson")$coef, digit = 22))
 // print(b, digit = 22)
-// sum((y-plogis(X%*%cc))^2); sum((y- plogis(X%*%b))^2)
+// print(tp, digits = 22)
+// sum((y- exp(X%*%tp))^2); sum((y-exp(X%*%cc))^2); sum((y- exp(X%*%b))^2)

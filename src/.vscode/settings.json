@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "math.h": "c",
+        "random": "c",
+        "omp.h": "c",
+        "vector": "c"
+    }
+}
