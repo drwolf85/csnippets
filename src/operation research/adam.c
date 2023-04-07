@@ -18,7 +18,11 @@
  * @param grad a routine that computes the gradient of the objective function
  */
 void adam(double *param, int *len, int *n_iter, void *info,
+<<<<<<< HEAD
           void (grad)(double *, double *, int *, void *)) {
+=======
+          void (*grad)(double *, double *, int *, void *)) {
+>>>>>>> 8d45c9bd26212037b9abfe746a1cd799d0554e09
     int t, i, np = *len;
     double sc_m, sc_s;
     double *grd_v;
@@ -31,7 +35,7 @@ void adam(double *param, int *len, int *n_iter, void *info,
     if (mom_m && mom_s && grd_v) {
         for (t = 0; t < *n_iter; t++) {
             /* Update the gradient */
-            grad(grd_v, param, len, info);
+            (*grad)(grd_v, param, len, info);
             /* Scaling factors */
             sc_m = 1.0 / (1.0 - pow(BETA_1, (double) t));
             sc_s = 1.0 / (1.0 - pow(BETA_2, (double) t));

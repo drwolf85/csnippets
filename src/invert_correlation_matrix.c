@@ -101,9 +101,10 @@ void solveCorMat(double *mat, int *nn) {
 }
 
 // n <- 10L
-// nn <- 4L
-// A <- matrix(runif(n * nn, -1), n, nn)
-// F <- t(sign(A)) %*% sign(A) * (1 / n)
+// nn <- 40L
+// A <- matrix(runif(n * nn), n, nn)
+// S <- pmax(pmin(scale(A), 1), -1)
+// F <- t(S) %*% S * (1 / n)
 // iA <- F + 0
 // diag(iA) <- 1
 // print(iA <- solve(iA))
