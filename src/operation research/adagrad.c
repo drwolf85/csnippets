@@ -16,11 +16,7 @@
  * @param grad a routine that computes the gradient of the objective function
  */
 void adagrad(double *param, int *len, int *n_iter, void *info,
-<<<<<<< HEAD
-          void (grad)(double *, double *, int *, void *)) {
-=======
           void (*grad)(double *, double *, int *, void *)) {
->>>>>>> 8d45c9bd26212037b9abfe746a1cd799d0554e09
     int t, i, np = *len;
     double *grd_v;
     double *mom_s;
