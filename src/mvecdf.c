@@ -39,72 +39,6 @@ int cmp_values(const void *aa, const void *bb) {
 
 /**
  * It sorts the columns of a matrix, 
- * and then computes the cumulative distribution function
- * 
- * @param pr pointer to the output array (a vector of length `n`)
- * @param x a matrix of size `n` x `p`
- * @param n number of rows (or samples)
- * @param p number of columns in the matrix (or variables)
- * 
- * @return a pointer to an array of `size_t` with the order of 
- */
-size_t * mvecdf(double *pr, double *x, size_t n, size_t p) {
-    size_t i, j;
-    double const invn = 1.0 / (double) n;
-    values *v;
-    size_t *o;
-
-    v = (values *) malloc(n * p * sizeof(values));
-    o = (size_t *) malloc(n * p * sizeof(size_t));
-    if (v && o) {
-        /* Organize the data of a matrix in a stracture values */
-        #pragma omp parallel for private(i, j) collapse(2)
-        for (j = 0; j < p; j++) {
-            for (i = 0; i < n; i++) {
-                v[n * j + i].v =  x[n * j + i];
-                v[n * j + i].i = i;
-            }
-        }
-        /* Sorting the data in each column of the matrix */
-        #pragma omp parallel for private(j)
-        for (j = 0; j < p; j++)
-            qsort(&v[j * n], n, sizeof(values), cmp_values);
-        /* Set indexes in each column of an "order" matrix */
-        #pragma omp parallel for private(i, j) collapse(2)
-        for (j = 0; j < p; j++) {
-            for (i = 0; i < n; i++) {
-                o[n * j + v[n * j + i].i] = i;
-            }
-        }
-        #pragma omp parallel for private(i, j)
-        for (i = 0; i < n; i++) {
-            pr[i] = 1.0;
-            for (j = 0; j < p; j++) {
-                pr[i] *= (0.5 + (double) o[n * j + i]) * invn;
-            }
-        }
-        /* Prepaaring the data for a returning pointer of size `n` */
-        v = (values *) realloc(v, n * sizeof(values));
-        o = (size_t *) realloc(o, n * sizeof(size_t));
-        /* Sorting the values of the vector `pr` and storing the indexes in `v` */
-        #pragma omp parallel for private(i)
-        for (i = 0; i < n; i++) {
-            v[i].v = pr[i];
-            v[i].i = i;
-        }
-        qsort(v, n, sizeof(values), cmp_values);
-        /* Copy hte indices indexes in `o` */
-        #pragma omp parallel for private(i)
-        for (i = 0; i < n; i++) {
-            o[i] = v[i].i;
-        }
-    }
-    free(v);
-    return o;
-}
-
-/**
- * It sorts the columns of a matrix, 
  * finds the minimum index among the columns of the matrix, 
  * and then computes the cumulative distribution function
  * 
@@ -119,16 +53,16 @@ void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
     size_t p = (size_t) *_p;
     double const invn = 1.0 / (double) n;
     values *v;
-    size_t *o;
+    double *o;
 
     v = (values *) malloc(n * p * sizeof(values));
-    o = (size_t *) malloc(n * p * sizeof(size_t));
+    o = (double *) malloc(n * p * sizeof(double));
     if (v && o) {
         /* Organize the data of a matrix in a stracture values */
         // #pragma omp parallel for private(i, j) collapse(2)
         for (j = 0; j < p; j++) {
             for (i = 0; i < n; i++) {
-                v[n * j + i].v =  x[n * j + i];
+                v[n * j + i].v = x[n * j + i];
                 v[n * j + i].i = i;
             }
         }
@@ -140,7 +74,7 @@ void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
         #pragma omp parallel for private(i, j) collapse(2)
         for (j = 0; j < p; j++) {
             for (i = 0; i < n; i++) {
-                o[n * j + v[n * j + i].i] = i;
+                o[n * j + v[n * j + i].i] = (0.5 + (double) i) * invn;
             }
         }
         /* Compute the empirical cumulative distribution function */
@@ -148,7 +82,79 @@ void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
         for (i = 0; i < n; i++) {
             pr[i] = 1.0;
             for (j = 0; j < p; j++) {
-                pr[i] *= (0.5 + (double) o[n * j + i]) * invn;
+                pr[i] *= o[n * j + i];
+            }
+        }
+    }
+    free(v);
+    free(o);
+}
+
+
+
+/**
+ * The function returns the minimum value between two input parameters.
+ * 
+ * @param a The first parameter "a" is a double precision floating point number representing the first
+ * value to be used in the minimum t-norm operation.
+ * @param b The parameter "b" in the function `min_tnorm` represents one of the two values that we want
+ * to compare and find the minimum of. It is a double data type, which means it can hold decimal
+ * values.
+ * 
+ * @return The function `min_tnorm` returns the minimum value between `a` and `b`.
+ */
+double min_tnorm(double a, double b) {
+    return (a > b) * b + (a <= b) * a;
+}
+
+
+
+/**
+ * It sorts the columns of a matrix, 
+ * finds the minimum index among the columns of the matrix, 
+ * and then computes the fuzzy Gödel–Dummett logic
+ * 
+ * @param pr pointer to the output array (a vector of length `n`)
+ * @param x a matrix of size `n` x `p`
+ * @param n number of rows (or samples)
+ * @param p number of columns in the matrix (or variables)
+ */
+void mvgdl_fuzz(double *pr, double *x, int *_n, int *_p) {
+    size_t i, j;
+    size_t n = (size_t) *_n;
+    size_t p = (size_t) *_p;
+    double const invn = 1.0 / (double) n;
+    values *v;
+    double *o;
+
+    v = (values *) malloc(n * p * sizeof(values));
+    o = (double *) malloc(n * p * sizeof(double));
+    if (v && o) {
+        /* Organize the data of a matrix in a stracture values */
+        // #pragma omp parallel for private(i, j) collapse(2)
+        for (j = 0; j < p; j++) {
+            for (i = 0; i < n; i++) {
+                v[n * j + i].v = x[n * j + i];
+                v[n * j + i].i = i;
+            }
+        }
+        /* Sorting the data in each column of the matrix */
+        #pragma omp parallel for private(j)
+        for (j = 0; j < p; j++)
+            qsort(&v[j * n], n, sizeof(values), cmp_values);
+        /* Set indexes in each column of an "order" matrix */
+        #pragma omp parallel for private(i, j) collapse(2)
+        for (j = 0; j < p; j++) {
+            for (i = 0; i < n; i++) {
+                o[n * j + v[n * j + i].i] = (0.5 + (double) i) * invn;
+            }
+        }
+        /* Compute the empirical cumulative distribution function */
+        #pragma omp parallel for private(i, j)
+        for (i = 0; i < n; i++) {
+            pr[i] = 1.0;
+            for (j = 0; j < p; j++) {
+                pr[i] = min_tnorm(pr[i], o[n * j + i]);
             }
         }
     }
@@ -157,6 +163,7 @@ void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
 }
 
 // dyn.load("test.so")
+// graphics.off()
 // pr <- double(n <- 500L)
 // for (p in 1L + seq_len(7L)) {
 //     x <- matrix(rnorm(n * p), n, p)
@@ -170,8 +177,8 @@ void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
 // x <- matrix(rnorm(n * p), n, p)
 // pr <- .C("mvecdf_prob", pr = pr, x, n, p, DUP = FALSE)$pr
 // par(mfrow=c(2, 2))
-// plot(x, cex = exp(pr - mean(pr) + 1) - 1)
-// plot(x, type = "n")    
+// plot(x, cex = exp(pr - mean(pr) + 1) - 1, asp = 1)
+// plot(x, type = "n", asp = 1)    
 // text(x, labels = round(pr, 3))
 // th <- apply(pnorm(x), 1, prod)
 // plot(th, pr, xlim = 0:1, ylim = 0:1); abline(0:1, col=8)
@@ -179,4 +186,22 @@ void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
 // x <- matrix(rnorm(n * p), n, p)
 // pr <- .C("mvecdf_prob", pr = pr, x, n, p, DUP = FALSE)$pr
 // th <- apply(pnorm(x), 1, prod)
-// plot(th, pr); abline(0:1, col=8)
+// plot(th, pr, asp = 1); abline(0:1, col=8)
+
+// x11()
+// p <- 2L
+// x <- matrix(rnorm(n * p), n, p)
+// pr <- .C("mvecdf_prob", pr = pr, x, n, p, DUP = FALSE)$pr
+// par(mfrow=c(2, 2))
+// plot(x, cex = exp(pr - mean(pr) + 1) - 1, asp = 1)
+// plot(x, type = "n", asp = 1)    
+// text(x, labels = round(pr, 3))
+// th <- apply(pnorm(x), 1, prod)
+// plot(th, pr, xlim = 0:1, ylim = 0:1); abline(0:1, col=8)
+// fz <- .C("mvgdl_fuzz", fz = double(n), x, n, p, DUP = FALSE)$fz
+// par(mfrow=c(2, 2))
+// plot(x, cex = exp(fz - mean(fz) + 1) - 1, asp = 1)
+// plot(x, type = "n", asp = 1)
+// text(x, labels = round(fz, 3))
+// th <- apply(pnorm(x), 1, prod)
+// plot(th, fz, xlim = 0:1, ylim = 0:1); abline(0:1, col=8)
