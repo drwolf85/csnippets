@@ -93,23 +93,6 @@ void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
 
 
 /**
- * The function returns the minimum value between two input parameters.
- * 
- * @param a The first parameter "a" is a double precision floating point number representing the first
- * value to be used in the minimum t-norm operation.
- * @param b The parameter "b" in the function `min_tnorm` represents one of the two values that we want
- * to compare and find the minimum of. It is a double data type, which means it can hold decimal
- * values.
- * 
- * @return The function `min_tnorm` returns the minimum value between `a` and `b`.
- */
-double min_tnorm(double a, double b) {
-    return (a > b) * b + (a <= b) * a;
-}
-
-
-
-/**
  * It sorts the columns of a matrix, 
  * finds the minimum index among the columns of the matrix, 
  * and then computes the fuzzy Gödel–Dummett logic
@@ -154,7 +137,8 @@ void mvgdl_fuzz(double *pr, double *x, int *_n, int *_p) {
         for (i = 0; i < n; i++) {
             pr[i] = 1.0;
             for (j = 0; j < p; j++) {
-                pr[i] = min_tnorm(pr[i], o[n * j + i]);
+                pr[i] = (pr[i] >  o[n * j + i]) * o[n * j + i] + \
+                        (pr[i] <= o[n * j + i]) * pr[i];
             }
         }
     }
