@@ -145,12 +145,14 @@ double chisini(double *y, size_t n, double (*fun)(double *, size_t)) {
     return res;
 }
 
-/* Function to test the validity of the approach above */
+
+
+/* Functions to test the validity of the approach above */
 double test_fun(double *x, size_t n) {
     size_t i;
     double res = 1.0;
     for (i = 0; i < n; i++) {
-        res = sqrt(res * exp(x[i]));
+        res = sqrt(res + exp(x[i]));
     }
     return res;
 }

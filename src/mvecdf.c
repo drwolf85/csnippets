@@ -37,15 +37,20 @@ int cmp_values(const void *aa, const void *bb) {
     }
 }
 
+
 /**
- * It sorts the columns of a matrix, 
- * finds the minimum index among the columns of the matrix, 
- * and then computes the cumulative distribution function
+ * The function computes the empirical cumulative distribution function of a matrix.
  * 
- * @param pr pointer to the output array (a vector of length `n`)
- * @param x a matrix of size `n` x `p`
- * @param n number of rows (or samples)
- * @param p number of columns in the matrix (or variables)
+ * @param pr `pr` is a pointer to an array of doubles that will store the computed empirical cumulative
+ * distribution function.
+ * @param x The input matrix x, which is a double pointer to a one-dimensional array of size n*p. It
+ * contains the data to be sorted and used to compute the empirical cumulative distribution function.
+ * The matrix is organized in column-major order, meaning that the first n elements correspond to the
+ * first column, the next
+ * @param _n The parameter `_n` is a pointer to an integer representing the number of observations in
+ * the data matrix.
+ * @param _p The parameter `_p` is an integer pointer that represents the number of columns in the
+ * matrix `x`.
  */
 void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
     size_t i, j;
@@ -90,17 +95,16 @@ void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
     free(o);
 }
 
-
-
 /**
- * It sorts the columns of a matrix, 
- * finds the minimum index among the columns of the matrix, 
- * and then computes the fuzzy Gödel–Dummett logic
+ * The function approximate the empirical cumulative distribution function of a matrix.
  * 
- * @param pr pointer to the output array (a vector of length `n`)
- * @param x a matrix of size `n` x `p`
- * @param n number of rows (or samples)
- * @param p number of columns in the matrix (or variables)
+ * @param pr `pr` is a pointer to an array of doubles that will store the output of the function. It
+ * will contain the values of the empirical cumulative distribution function computed by the function.
+ * @param x The parameter `x` is a pointer to a double array containing the data matrix. The matrix has
+ * `n` rows and `p` columns, where `n` and `p` are integers passed as pointers to the function.
+ * @param _n The parameter `_n` is a pointer to an integer representing the number of observations in
+ * the data matrix.
+ * @param _p _p is a pointer to an integer representing the number of columns in the matrix.
  */
 void mvgdl_fuzz(double *pr, double *x, int *_n, int *_p) {
     size_t i, j;
