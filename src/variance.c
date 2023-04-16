@@ -16,7 +16,7 @@ double pop_variance(double *x, size_t n) {
     double sum = 0.0;
     double res = 0.0;
     double nnan = 0.0;
-    #pragma omp parallel for private(i) reduction(+ : nnan, res, sum)
+    #pragma omp parallel for simd reduction(+ : nnan, res, sum)
     for (i = 0; i < n; i++) {
         if (!isnan(x[i])) {
             nnan += 1.0;
@@ -41,7 +41,7 @@ double smp_variance(double *x, size_t n) {
     double sum = 0.0;
     double res = 0.0;
     double nnan = 0.0;
-    #pragma omp parallel for private(i) reduction(+ : nnan, res, sum)
+    #pragma omp parallel for simd reduction(+ : nnan, res, sum)
     for (i = 0; i < n; i++) {
         if (!isnan(x[i])) {
             nnan += 1.0;
@@ -58,7 +58,14 @@ double smp_variance(double *x, size_t n) {
 /* Testing function */
 int main () {
     double x[5] = { 0.0, 0.0, 1.0, 2.1, 4.5};
+    double y[50]= { 0.0, 0.0, 1.0, 2.1, 4.5, 0.0, 1.0, 2.1, -4.5, 8.1,
+                    0.0, 0.0, -1.0, 2.1, 4.5, 0.0, -1.0, 2.1, 4.5, 8.1,
+                    0.0, 0.0, 1.0, -2.1, 4.5, 0.1, -1.0, -2.1, 4.5, -8.1,
+                    0.0, 0.0, -1.0, 2.1, -4.5, 0.2, 1.0, 2.1, 4.5, 8.1,
+                    0.0, 0.0, 1.0, -2.1, -4.5, 0.3, 1.0, -2.1, -4.5, 8.1};
     printf("Population variance of x = %f\n", pop_variance(x, 5));
     printf("Sample variance of x = %f\n", smp_variance(x, 5));
+    printf("Population variance of y = %f\n", pop_variance(y, 50));
+    printf("Sample variance of y = %f\n", smp_variance(y, 50));
     return 0;
 }
