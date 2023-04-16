@@ -16,7 +16,7 @@ double pop_variance(double *x, size_t n) {
     double sum = 0.0;
     double res = 0.0;
     double nnan = 0.0;
-    #pragma omp parallel for private(i) reduction(+ : nnan, res)
+    #pragma omp parallel for private(i) reduction(+ : nnan, res, sum)
     for (i = 0; i < n; i++) {
         if (!isnan(x[i])) {
             nnan += 1.0;
@@ -41,7 +41,7 @@ double smp_variance(double *x, size_t n) {
     double sum = 0.0;
     double res = 0.0;
     double nnan = 0.0;
-    #pragma omp parallel for private(i) reduction(+ : nnan, res)
+    #pragma omp parallel for private(i) reduction(+ : nnan, res, sum)
     for (i = 0; i < n; i++) {
         if (!isnan(x[i])) {
             nnan += 1.0;
