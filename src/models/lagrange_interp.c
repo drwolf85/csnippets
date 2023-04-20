@@ -6,6 +6,22 @@
 #include <stdlib.h>
 #include <math.h>
 
+/**
+ * The function `lagrange_interp` performs Lagrange interpolation on a set of data points given by `xv`
+ * and `yv` to estimate the value of `y` at a given `x`.
+ * 
+ * @param x The value at which we want to interpolate the function.
+ * @param xv An array of size n containing the x-coordinates of the data points.
+ * @param yv `yv` is a pointer to an array of `double` values representing the function values at the
+ * corresponding `xv` values. In other words, `yv[i]` is the function value at `xv[i]`.
+ * @param n The number of data points in the arrays `xv` and `yv`.
+ * 
+ * @return The function `lagrange_interp` returns a double precision floating point number, which is
+ * the interpolated value of the function at the given point `x`. If all the values in `xv` belong to
+ * the interval [-1, 1], then the function interpolates the values using the Lagrange interpolation
+ * method and returns the interpolated value. If any value in `xv` is outside the interval, it returns
+ * a NaN.
+ */
 double lagrange_interp(double x, double *xv, double *yv, size_t n) {
     double res = nan("");
     double over, under;
