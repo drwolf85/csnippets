@@ -5,6 +5,16 @@
 
 #define EPS_TOLL 1e-10
 
+/**
+ * The function calculates the minimum value of an array of doubles, ignoring any NaN values.
+ * 
+ * @param x a pointer to an array of double values
+ * @param n The parameter "n" represents the number of elements in the array "x".
+ * 
+ * @return The function `minimum_value` returns the minimum value of an array of doubles `x` of size
+ * `n`. If the array contains any `NaN` values, they are ignored and the minimum value is calculated
+ * based on the remaining values.
+ */
 double minimum_value(double *x, size_t n) {
     size_t j, i = 0;
     double res = *x;
@@ -21,6 +31,17 @@ double minimum_value(double *x, size_t n) {
     return res;
 }
 
+/**
+ * The function calculates the maximum value in an array of doubles, ignoring any NaN values.
+ * 
+ * @param x A pointer to an array of double values.
+ * @param n The parameter `n` is the size of the array `x`, which is the number of elements in the
+ * array.
+ * 
+ * @return The function `maximum_value` returns the maximum value in the array `x` of size `n`. If the
+ * array contains any `NaN` values, the function skips over them and returns the maximum value of the
+ * remaining elements.
+ */
 double maximum_value(double *x, size_t n) {
     size_t i = 0;
     double res = *x;
@@ -36,6 +57,17 @@ double maximum_value(double *x, size_t n) {
     return res;
 }
 
+/**
+ * The function calculates the range of a given array of doubles by finding the minimum and maximum
+ * values in the array.
+ * 
+ * @param x x is a pointer to an array of double values, representing a sample of data.
+ * @param n The parameter "n" represents the number of elements in the array "x".
+ * 
+ * @return the range of the input array `x` of size `n`. If the range can be computed, it returns the
+ * range value as a double. If the range cannot be computed (e.g. if all elements of `x` are NaN), it
+ * returns NaN.
+ */
 double range(double *x, size_t n) {
     double minv = *x, maxv = *x;
     double res = nan("");
@@ -91,6 +123,18 @@ int cmp_values(const void *aa, const void *bb) {
     }
 }
 
+/**
+ * The function calculates the quantile of a given probability distribution using linear interpolation
+ * between points.
+ * 
+ * @param x a pointer to an array of doubles representing the dataset for which the quantile is to be
+ * calculated.
+ * @param n The parameter "n" represents the number of elements in the array "x".
+ * @param prob prob is the probability value for which we want to find the corresponding quantile. For
+ * example, if we want to find the 75th percentile, prob would be 0.75.
+ * 
+ * @return a double value, which is the quantile of the input array x at the given probability prob.
+ */
 double quantile(double *x, size_t n, double prob) {
     double target;
     double res = nan("");
