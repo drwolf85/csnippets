@@ -37,6 +37,42 @@ int cmp_values(const void *aa, const void *bb) {
     }
 }
 
+/**
+ * The function calculates the probability of each element in a vector being the minimum value across
+ * all elements in the vector.
+ * 
+ * @param pr `pr` is a pointer to an array of doubles that will store the output probabilities. The
+ * function `mvecdf_prob` calculates the probabilities and stores them in this array.
+ * @param x x is a pointer to a double array containing the data for which the probability is to be
+ * calculated. The data is assumed to be arranged in a column-major format, where each column
+ * represents a variable and each row represents an observation.
+ * @param _n The number of observations in the dataset.
+ * @param _p The parameter `_p` represents the number of variables in the multivariate distribution.
+ */
+void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
+    char tmp;
+    size_t i, j, k;
+    size_t const n = (size_t) *_n;
+    size_t const p = (size_t) *_p;
+    double const invn = 1.0 / (double) n;
+    size_t *v;
+
+    v = (size_t *) calloc(n, sizeof(size_t));
+    if (v) {
+        #pragma omp parallel for simd private(j, k, tmp)
+        for (i = 0; i < n; i++) {
+            for (j = 0; j < n; j++) {
+                tmp = 1;
+                for (k = 0; k < p; k++) {
+                    tmp &= (x[n * k + j] <= x[n * k + i]);
+                }
+                v[i] += (size_t) tmp;
+            }
+            pr[i] = (double) v[i] * invn;
+        }
+    }
+    free(v);
+}
 
 /**
  * The function computes the empirical cumulative distribution function of a matrix.
@@ -52,7 +88,7 @@ int cmp_values(const void *aa, const void *bb) {
  * @param _p The parameter `_p` is an integer pointer that represents the number of columns in the
  * matrix `x`.
  */
-void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
+void mvprd_fuzz(double *pr, double *x, int *_n, int *_p) {
     size_t i, j;
     size_t n = (size_t) *_n;
     size_t p = (size_t) *_p;
@@ -155,7 +191,7 @@ void mvgdl_fuzz(double *pr, double *x, int *_n, int *_p) {
 // pr <- double(n <- 500L)
 // for (p in 1L + seq_len(7L)) {
 //     x <- matrix(rnorm(n * p), n, p)
-//     pr <- .C("mvecdf_prob", pr = pr, x, n, p, DUP = FALSE)$pr
+//     pr <- .C("mvprd_fuzz", pr = pr, x, n, p, DUP = FALSE)$pr
 //     cat("Number of variables:", p, "\n")
 //     print(range(pr))
 //     print(x[which.min(pr),])
@@ -163,7 +199,7 @@ void mvgdl_fuzz(double *pr, double *x, int *_n, int *_p) {
 // }
 // p <- 2L
 // x <- matrix(rnorm(n * p), n, p)
-// pr <- .C("mvecdf_prob", pr = pr, x, n, p, DUP = FALSE)$pr
+// pr <- .C("mvprd_fuzz", pr = pr, x, n, p, DUP = FALSE)$pr
 // par(mfrow=c(2, 2))
 // plot(x, cex = exp(pr - mean(pr) + 1) - 1, asp = 1)
 // plot(x, type = "n", asp = 1)    
@@ -172,14 +208,14 @@ void mvgdl_fuzz(double *pr, double *x, int *_n, int *_p) {
 // plot(th, pr, xlim = 0:1, ylim = 0:1); abline(0:1, col=8)
 // p <- 8L
 // x <- matrix(rnorm(n * p), n, p)
-// pr <- .C("mvecdf_prob", pr = pr, x, n, p, DUP = FALSE)$pr
+// pr <- .C("mvprd_fuzz", pr = pr, x, n, p, DUP = FALSE)$pr
 // th <- apply(pnorm(x), 1, prod)
 // plot(th, pr, asp = 1); abline(0:1, col=8)
 
 // x11()
 // p <- 2L
 // x <- matrix(rnorm(n * p), n, p)
-// pr <- .C("mvecdf_prob", pr = pr, x, n, p, DUP = FALSE)$pr
+// pr <- .C("mvprd_fuzz", pr = pr, x, n, p, DUP = FALSE)$pr
 // par(mfrow=c(2, 2))
 // plot(x, cex = exp(pr - mean(pr) + 1) - 1, asp = 1)
 // plot(x, type = "n", asp = 1)    
@@ -193,3 +229,23 @@ void mvgdl_fuzz(double *pr, double *x, int *_n, int *_p) {
 // text(x, labels = round(fz, 3))
 // th <- apply(pnorm(x), 1, prod)
 // plot(th, fz, xlim = 0:1, ylim = 0:1); abline(0:1, col=8)
+
+// x11()
+// par(mfrow=c(2, 2))
+// ep <- .C("mvecdf_prob", ep = double(n), x, n, p, DUP = FALSE)$ep
+// plot(x, cex = exp(ep - mean(ep) + 1) - 1, asp = 1)
+// plot(x, type = "n", asp = 1)
+// text(x, labels = round(ep, 3))
+// th <- apply(pnorm(x), 1, prod)
+// plot(th, ep, xlim = 0:1, ylim = 0:1); abline(0:1, col=8)
+
+// x11()
+// par(mfrow=c(2, 2))
+// ep <- .C("mvecdf_prob", ep = double(n), x, n, p, DUP = FALSE)$ep
+// plot(x, cex = exp(ep - mean(ep) + 1) - 1, asp = 1)
+// plot(x, type = "n", asp = 1)
+// text(x, labels = round(ep, 3))
+// ep <- .C("mvprd_fuzz", ep = double(n), x, n, p, DUP = FALSE)$ep
+// plot(x, cex = exp(ep - mean(ep) + 1) - 1, asp = 1)
+// plot(x, type = "n", asp = 1)
+// text(x, labels = round(ep, 3))
