@@ -88,7 +88,7 @@ int main() {
     p = punif(x, 0.0, 2.0);
     q = qunif(0.95, 0.0, 1.0);
     printf("x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
-    /* Main function to test the random generation of a normal variable */
+    /* Main function to test the random generation of a uniform variable */
     for (int i = 1; i <= 40; i++) {
         tmp = runif(-1.0, 1.0);
         if (tmp >= 0.0) printf(" ");

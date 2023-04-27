@@ -84,7 +84,7 @@ int main() {
     p = pexp(x, 2.0);
     q = qexp(0.95, 1.0);
     printf("x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
-    /* Main function to test the random generation of a normal variable */
+    /* Main function to test the random generation of an exponential variable */
     for (int i = 1; i <= 40; i++) {
         tmp = rexp(2.0);
         if (tmp >= 0.0) printf(" ");
