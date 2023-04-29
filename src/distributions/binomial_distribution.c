@@ -1,0 +1,149 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
+
+/**
+ * The function calculates the probability of getting x successes in n independent trials with a given
+ * probability of success.
+ * 
+ * @param x The number of successes in the binomial distribution.
+ * @param n The parameter "n" represents the total number of trials in a binomial experiment.
+ * @param prob The probability of success in a single trial of a binomial experiment.
+ * 
+ * @return a double value, which is the probability of getting exactly x successes in n independent
+ * Bernoulli trials with probability of success prob.
+ */
+double dbinom(int x, int n, double prob) {
+    int i;
+    double tmp = 0.0, z = nan("");
+    double *vp = (double *) calloc(n + 1, sizeof(double));
+    if (vp) if (prob >= 0.0 && prob <= 1.0) {
+        for (i = 0; i <= n; i++) {
+            vp[i] = pow(prob, (double) i);
+            vp[i] *= pow(1.0 - prob, (double) (n - i));
+        }
+        for (i = 0; i <= n; i++) tmp += vp[i];
+        z = vp[x] / tmp;
+    }
+    free(vp);
+    return z;
+}
+
+/**
+ * The function calculates the probability of getting x or fewer successes in n independent Bernoulli
+ * trials with probability of success prob.
+ * 
+ * @param x The number of successes in the binomial distribution.
+ * @param n The parameter "n" represents the total number of trials in a binomial distribution.
+ * @param prob The probability of success in a single trial of a binomial experiment.
+ * 
+ * @return a double value, which is the probability of getting x or fewer successes in a binomial
+ * distribution with n trials and a given probability of success (prob).
+ */
+double pbinom(int x, int n, double prob) {
+    int i;
+    double tmp, z = nan("");
+    double *vp = (double *) calloc(n + 1, sizeof(double));
+    if (vp) if (prob >= 0.0 && prob <= 1.0) {
+        for (i = 0; i <= n; i++) {
+            vp[i] = pow(prob, (double) i);
+            vp[i] *= pow(1.0 - prob, (double) (n - i));
+        }
+        tmp = vp[0];
+        for (i = 1; i <= n; i++) {
+            tmp += vp[i];
+            vp[i] = tmp;
+        }
+        z = vp[x] / tmp;
+    }
+    free(vp);
+    return z;
+}
+
+/**
+ * The function qbinom calculates the inverse of the cumulative distribution function of a binomial
+ * distribution.
+ * 
+ * @param p The probability threshold for the quantile function. The function will return the smallest
+ * integer i such that the cumulative probability of the binomial distribution is less than p.
+ * @param n The parameter "n" represents the number of trials in a binomial distribution.
+ * @param prob The probability of success in a Bernoulli trial.
+ * 
+ * @return a double value, which is the number of successes (i.e., the number of times an event of
+ * interest occurs) in a Bernoulli trial with a given probability of success and a given number of
+ * trials, such that the probability of observing the returned number of successes or fewer is less
+ * than or equal to a given probability value.
+ */
+double qbinom(double p, int n, double prob) {
+    int i;
+    double tmp, z = nan("");
+    double *vp = (double *) calloc(n + 1, sizeof(double));
+    if (vp) if (prob >= 0.0 && prob <= 1.0) {
+        for (i = 0; i <= n; i++) {
+            vp[i] = pow(prob, (double) i);
+            vp[i] *= pow(1.0 - prob, (double) (n - i));
+        }
+        tmp = vp[0];
+        for (i = 1; i <= n; i++) {
+            tmp += vp[i];
+            vp[i] = tmp;
+        }
+        for (i = 0; i <= n; i++) {
+            vp[i] /= tmp;
+            if (vp[i] < p) {
+                z = (double) i;
+            }
+        }
+    }
+    free(vp);
+    return z;
+}
+
+/**
+ * The function generates a random number of successes in a given number of trials based on a given
+ * probability.
+ * 
+ * @param n The parameter "n" represents the number of trials in the binomial distribution.
+ * @param prob The probability of success for each trial in the binomial distribution.
+ * 
+ * @return a double value, which represents the number of successes in n independent Bernoulli trials
+ * with probability of success equal to prob.
+ */
+double rbinom(int n, double prob) {
+    int i;
+    unsigned long u, m;
+    double z = nan("");
+    double *vp = (double *) calloc(n + 1, sizeof(double));
+    if (vp) if (prob >= 0.0 && prob <= 1.0) {
+        z = 0.0;
+        for (i = 0; i < n; i++) {
+            u = rand();
+            m = ~(1 << 31);
+            u &= m;
+            z += (double) (ldexp((double) u, -31) <= prob);        
+        }
+    }
+    free(vp);
+    return z;
+}
+
+/* Test function */
+int main() {
+    double x = 1.0;
+    double d, p, q;
+    double tmp;
+    srand(time(NULL)); /* Initialize the random generator */
+    d = dbinom(x, 5, 0.25);
+    p = pbinom(x, 5, 0.75);
+    q = qbinom(0.95, 5, 0.777);
+    printf("x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
+    /* Main function to test the random generation of a Bernoulli variable */
+    for (int i = 1; i <= 40; i++) {
+        tmp = rbinom(5, 0.678);
+        if (tmp >= 0.0) printf(" ");
+        printf("%1.f\t", tmp);
+        if (i % 5 == 0) printf("\n");
+    }
+    return 0;
+}

@@ -96,13 +96,13 @@ int main() {
     srand(time(NULL)); /* Initialize the random generator */
     d = dbern(x, 0.5);
     p = pbern(x, 0.75);
-    q = qbern(0.95, 1.0);
+    q = qbern(0.95, 0.777);
     printf("x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
     /* Main function to test the random generation of a Bernoulli variable */
     for (int i = 1; i <= 40; i++) {
         tmp = rbern(0.5);
         if (tmp >= 0.0) printf(" ");
-        printf("%f\t", tmp);
+        printf("%1.f\t", tmp);
         if (i % 5 == 0) printf("\n");
     }
     return 0;
