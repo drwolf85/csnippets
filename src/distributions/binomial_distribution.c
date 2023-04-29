@@ -4,6 +4,25 @@
 #include <time.h>
 
 /**
+ * The function calculates the binomial coefficient using the gamma function.
+ * 
+ * @param n The total number of items in the set or population.
+ * @param k k represents the number of objects to be chosen from a set of n objects in a binomial
+ * distribution.
+ * 
+ * @return The function `binom` returns the value of the binomial coefficient "n choose k", which
+ * represents the number of ways to choose k items from a set of n distinct items, without regard to
+ * order. The function calculates this value using the formula n! / (k! * (n-k)!), but uses logarithmic
+ * and exponential functions to avoid numerical overflow or underflow.
+ */
+double binom(int n, int k) {
+    double res = lgamma((double) (n + 1));
+    res -= lgamma((double) (k + 1));
+    res -= lgamma((double) (n - k + 1)); 
+    return exp(res);
+}
+
+/**
  * The function calculates the probability of getting x successes in n independent trials with a given
  * probability of success.
  * 
@@ -17,16 +36,11 @@
 double dbinom(int x, int n, double prob) {
     int i;
     double tmp = 0.0, z = nan("");
-    double *vp = (double *) calloc(n + 1, sizeof(double));
-    if (vp) if (prob >= 0.0 && prob <= 1.0) {
-        for (i = 0; i <= n; i++) {
-            vp[i] = pow(prob, (double) i);
-            vp[i] *= pow(1.0 - prob, (double) (n - i));
-        }
-        for (i = 0; i <= n; i++) tmp += vp[i];
-        z = vp[x] / tmp;
+    if (prob >= 0.0 && prob <= 1.0) {
+        z = binom(n, x);
+        z *= pow(prob, (double) x);
+        z *= pow(1.0 - prob, (double) (n - x));
     }
-    free(vp);
     return z;
 }
 
@@ -44,20 +58,12 @@ double dbinom(int x, int n, double prob) {
 double pbinom(int x, int n, double prob) {
     int i;
     double tmp, z = nan("");
-    double *vp = (double *) calloc(n + 1, sizeof(double));
-    if (vp) if (prob >= 0.0 && prob <= 1.0) {
-        for (i = 0; i <= n; i++) {
-            vp[i] = pow(prob, (double) i);
-            vp[i] *= pow(1.0 - prob, (double) (n - i));
+    if (x >= 0 && x <= n && prob >= 0.0 && prob <= 1.0) {
+        z = dbinom(0, n, prob);
+        for (i = 1; i <= x; i++) {
+            z += dbinom(i, n, prob);
         }
-        tmp = vp[0];
-        for (i = 1; i <= n; i++) {
-            tmp += vp[i];
-            vp[i] = tmp;
-        }
-        z = vp[x] / tmp;
     }
-    free(vp);
     return z;
 }
 
@@ -78,25 +84,16 @@ double pbinom(int x, int n, double prob) {
 double qbinom(double p, int n, double prob) {
     int i;
     double tmp, z = nan("");
-    double *vp = (double *) calloc(n + 1, sizeof(double));
-    if (vp) if (prob >= 0.0 && prob <= 1.0) {
-        for (i = 0; i <= n; i++) {
-            vp[i] = pow(prob, (double) i);
-            vp[i] *= pow(1.0 - prob, (double) (n - i));
-        }
-        tmp = vp[0];
+    if (p >= 0.0 && p <= 1.0 && prob >= 0.0 && prob <= 1.0) {
+        z = dbinom(0, n, prob);
         for (i = 1; i <= n; i++) {
-            tmp += vp[i];
-            vp[i] = tmp;
-        }
-        for (i = 0; i <= n; i++) {
-            vp[i] /= tmp;
-            if (vp[i] < p) {
-                z = (double) i;
+            z += dbinom(i, n, prob);
+            if (z > p) {
+                break;
             }
         }
+        z = (double) (i - 1);    
     }
-    free(vp);
     return z;
 }
 

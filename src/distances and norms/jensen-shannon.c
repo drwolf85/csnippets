@@ -18,7 +18,7 @@
  * with another PDF represented by the function `x`. The same support of the two PDFs is required.
  * 
  * @return The function `jensen_shannon_distance` is returning the Jensen-Shannon distance between two
- * probability density functions represented by the input function pointers `x` and `2y`.
+ * probability density functions represented by the input function pointers `x` and `y`.
  */
 double jensen_shannon_distance(double (*x)(double), double (*y)(double)) {
     double res = 0.0;
