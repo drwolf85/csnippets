@@ -36,7 +36,7 @@ double binom(int n, int k) {
 double dbinom(int x, int n, double prob) {
     int i;
     double tmp = 0.0, z = nan("");
-    if (prob >= 0.0 && prob <= 1.0) {
+    if (prob >= 0.0 && prob <= 1.0 && n >= 0) {
         z = binom(n, x);
         z *= pow(prob, (double) x);
         z *= pow(1.0 - prob, (double) (n - x));
@@ -58,7 +58,7 @@ double dbinom(int x, int n, double prob) {
 double pbinom(int x, int n, double prob) {
     int i;
     double tmp, z = nan("");
-    if (x >= 0 && x <= n && prob >= 0.0 && prob <= 1.0) {
+    if (x >= 0 && x <= n && prob >= 0.0 && prob <= 1.0 && n >= 0) {
         z = dbinom(0, n, prob);
         for (i = 1; i <= x; i++) {
             z += dbinom(i, n, prob);
@@ -84,7 +84,7 @@ double pbinom(int x, int n, double prob) {
 double qbinom(double p, int n, double prob) {
     int i;
     double tmp, z = nan("");
-    if (p >= 0.0 && p <= 1.0 && prob >= 0.0 && prob <= 1.0) {
+    if (p >= 0.0 && p <= 1.0 && prob >= 0.0 && prob <= 1.0 && n >= 0) {
         z = dbinom(0, n, prob);
         for (i = 1; i <= n; i++) {
             z += dbinom(i, n, prob);
@@ -111,8 +111,7 @@ double rbinom(int n, double prob) {
     int i;
     unsigned long u, m;
     double z = nan("");
-    double *vp = (double *) calloc(n + 1, sizeof(double));
-    if (vp) if (prob >= 0.0 && prob <= 1.0) {
+    if (n >= 0 && prob >= 0.0 && prob <= 1.0) {
         z = 0.0;
         for (i = 0; i < n; i++) {
             u = rand();
@@ -121,7 +120,6 @@ double rbinom(int n, double prob) {
             z += (double) (ldexp((double) u, -31) <= prob);        
         }
     }
-    free(vp);
     return z;
 }
 
@@ -135,7 +133,7 @@ int main() {
     p = pbinom(x, 5, 0.75);
     q = qbinom(0.95, 5, 0.777);
     printf("x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
-    /* Main function to test the random generation of a Bernoulli variable */
+    /* Main function to test the random generation of a Binomial variable */
     for (int i = 1; i <= 40; i++) {
         tmp = rbinom(5, 0.678);
         if (tmp >= 0.0) printf(" ");
