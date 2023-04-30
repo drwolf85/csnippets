@@ -57,7 +57,7 @@ void inverseUT(double *mat, int *nn) {
  * @param nn the number of rows and columns in the matrix
  */
 void cholCovMat(double *mat, int *nn) {
-    int i, j, k;
+    int i, j, k = 0;
     double tmp;
 
     /* Procesing the first row */
