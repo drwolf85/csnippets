@@ -1,6 +1,6 @@
 /**
  * @file lagrange_interp.c
- * @brief Lagrange interpolation of one-dimentional functions  * 
+ * @brief Lagrange interpolation of one-dimensional functions  * 
  */
 #include <stdio.h>
 #include <stdlib.h>

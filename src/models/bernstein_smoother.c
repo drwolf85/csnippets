@@ -1,7 +1,38 @@
+/**
+ * @file bernstein_smoother.c
+ * @brief Implementation of the Bernstein polynomials and a
+ *   smoother based on this one dimensional function approximation
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <omp.h>
+
+double bernstein_poly(double x, double (*f)(double), int n) {
+    int i;
+    double omx, tmp, res = 0.0;
+    n--;
+    if (x < 0.0 || x > 1.0) { 
+        res = nan(""); 
+    }
+    else if (x == 0.0 || x == 1.0) {
+        res = (*f)(x);
+    }
+    else {
+        omx = log(1.0 - x);
+        x = log(x);
+        #pragma omp parallel for simd private(tmp) reduction(+ : res)
+        for (i = 0; i <= n; i++) {
+            tmp = lgamma((double) (n + 1));
+            tmp -= lgamma((double) (i + 1));
+            tmp -= lgamma((double) (n - i + 1));
+            tmp += x * (double) i;
+            tmp += omx * (double) (n - i);
+            res += exp(tmp) * (*f)((double) i / (double) n);
+        }
+    }
+    return res;
+}
 
 double bernstein_smooth(double x, double *v, int n) {
     int i;
@@ -27,32 +58,6 @@ double bernstein_smooth(double x, double *v, int n) {
             tmp += x * (double) i;
             tmp += omx * (double) (n - i);
             res += exp(tmp) * v[i];
-        }
-    }
-    return res;
-}
-
-double bernstein_poly(double x, double (*f)(double), int n) {
-    int i;
-    double omx, tmp, res = 0.0;
-    n--;
-    if (x < 0.0 || x > 1.0) { 
-        res = nan(""); 
-    }
-    else if (x == 0.0 || x == 1.0) {
-        res = (*f)(x);
-    }
-    else {
-        omx = log(1.0 - x);
-        x = log(x);
-        #pragma omp parallel for simd private(tmp) reduction(+ : res)
-        for (i = 0; i <= n; i++) {
-            tmp = lgamma((double) (n + 1));
-            tmp -= lgamma((double) (i + 1));
-            tmp -= lgamma((double) (n - i + 1));
-            tmp += x * (double) i;
-            tmp += omx * (double) (n - i);
-            res += exp(tmp) * (*f)((double) i / (double) n);
         }
     }
     return res;
