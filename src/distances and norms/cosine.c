@@ -3,7 +3,7 @@
 #include <math.h>
 #include <omp.h>
 
-#define MIN_EPS 1e-20
+#define MIN_EPS 1e-40
 
 /**
  * The function calculates the cosine distance between two vectors of double values.
@@ -26,9 +26,9 @@ double cosine_distance(double *x, double *y, size_t n) {
         yn += y[i] * y[i];
         rs += x[i] * y[i];
     }
+    xn = sqrt(xn);
+    xn *= sqrt(yn);
     xn = (xn > MIN_EPS) * xn + (xn <= MIN_EPS) * MIN_EPS;
-    yn = (yn > MIN_EPS) * yn + (yn <= MIN_EPS) * MIN_EPS;
-    xn *= yn;
     return sqrt(2.0 - 2.0 * rs / xn);
 }
 
