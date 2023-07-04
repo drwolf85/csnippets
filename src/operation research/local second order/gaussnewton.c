@@ -104,6 +104,17 @@ void solveHessMat(double *mat, int *nn) {
     outer_prod_UpperTri(mat, nn); /* Outer product */
 }
 
+/**
+ * It computes the Gauss-Newton optimization steps, to minimize a
+ * nonlinear error function using the nonlinear least square approximation. 
+ * 
+ * @param param the parameters to be optimized
+ * @param len the length of the parameter vector
+ * @param n_iter number of iterations
+ * @param info a pointer to a structure that contains the data and other information
+ * @param grad a routine that computes the gradient of the objective function
+ * @param hess a routine that computes the Hessian of the objective function
+ */
 void gaussnewton(double *param, int *len, int *n_iter, void *info,
                  void (*grad)(double *, double *, int *, void *),
                  void (*hess)(double *, double *, int *, void *)) {
@@ -124,7 +135,7 @@ void gaussnewton(double *param, int *len, int *n_iter, void *info,
             (*hess)(hss_m, param, len, info);
             /* Invert the Hessian matrix */
             solveHessMat(hss_m, len);
-            /* Compute `H^{-1} \nabla f(param)` */
+            /* Compute descending step */
             #pragma omp parallel for simd private(j, tmp)
             for (i = 0; i < np; i++) {
                 tmp = hss_m[np * i] * grd_v[0];
