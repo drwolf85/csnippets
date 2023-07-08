@@ -1,22 +1,15 @@
+#define __USE_MISC 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
 #include <time.h>
 
-/**
- * The qubit type represents a complex value.
- * @property {complex} value - The `value` property is a pointer to a `complex` data type.
- */
 typedef struct {
     complex *value;
 } qubit;
 
-/**
- * The function initializes a qubit by setting its value to a random zero ket.
- * 
- * @return a pointer to a qubit structure.
- */
 qubit * qubit_init() {
     unsigned long u, m = ~(1 << 31);
     double tmp;
@@ -34,22 +27,11 @@ qubit * qubit_init() {
     return q;
 }
 
-/**
- * The function qubit_free frees the memory allocated for a qubit structure.
- * 
- * @param q The parameter "q" is a pointer to a qubit structure.
- */
 void qubit_free(qubit *q) {
     free(q->value);
     free(q);
 }
 
-/**
- * The function `quantum_not` swaps the values of the first and second elements in the `value` array of
- * a given `qubit` structure.
- * 
- * @param q The parameter `q` is a pointer to a qubit structure.
- */
 void quantum_not(qubit *q) {
     complex a;
     if (q) if (q->value) {
@@ -59,34 +41,16 @@ void quantum_not(qubit *q) {
     }
 }
 
-/**
- * The function "pauli_identity" does not perform any operations and simply returns.
- * 
- * @param q The parameter "q" is a pointer to a qubit object.
- * 
- * @return Nothing is being returned. The return type of the function is void, which means it does not
- * return any value.
- */
 void pauli_identity(qubit *q) {
     return;
 }
 
-/**
- * The function pauli_X performs a Pauli-X gate operation on a qubit if it has a value.
- * 
- * @param q The parameter "q" is a pointer to a qubit object.
- */
 void pauli_X(qubit *q) {
     if (q) if (q->value) {
         quantum_not(q);
     }
 }
 
-/**
- * The function pauli_Y applies the Pauli Y gate to a qubit.
- * 
- * @param q The parameter `q` is a pointer to a `qubit` structure.
- */
 void pauli_Y(qubit *q) {
     complex a;
     if (q) if (q->value) {
@@ -96,23 +60,12 @@ void pauli_Y(qubit *q) {
     }
 }
 
-/**
- * The function pauli_Z applies the Pauli-Z gate to a qubit by negating the imaginary part of its
- * value.
- * 
- * @param q The parameter "q" is a pointer to a qubit structure.
- */
 void pauli_Z(qubit *q) {
     if (q) if (q->value) {
         q->value[1] = -q->value[1];
     }
 }
 
-/**
- * The function `sqrt_not` performs a square root not of the input qubit.
- * 
- * @param q The parameter "q" is a pointer to a qubit structure.
- */
 void sqrt_not(qubit *q) {
     complex a, b;
     if (q) if (q->value) {
@@ -123,11 +76,6 @@ void sqrt_not(qubit *q) {
     }
 }
 
-/**
- * The function performs the Hadamard transformation on a qubit.
- * 
- * @param q The parameter `q` is a pointer to a `qubit` structure.
- */
 void hadamard(qubit *q) {
     complex a, b;
     double const m_isqrt2 = sqrt(0.5);
@@ -139,13 +87,6 @@ void hadamard(qubit *q) {
     }
 }
 
-/**
- * The function `r_x` applies a rotation around the x-axis to a qubit.
- * 
- * @param q The parameter `q` is a pointer to a qubit structure.
- * @param alpha The parameter "alpha" in the given code represents the rotation angle in radians. It is
- * used to rotate the state of a qubit around the X-axis on the Bloch sphere.
- */
 void r_x(qubit *q, double alpha) {
     complex a, b;
     double const c = cos(alpha * 0.5);
@@ -158,14 +99,6 @@ void r_x(qubit *q, double alpha) {
     }
 }
 
-/**
- * The function `r_y` applies a rotation around the y-axis to a qubit, given an angle `alpha`.
- * 
- * @param q The parameter `q` is a pointer to a qubit structure.
- * @param alpha The parameter "alpha" in the given code represents the rotation angle in radians. It is
- * used to calculate the values of "c" and "s" which are the cosine and sine of half of the rotation
- * angle, respectively. These values are then used to perform a rotation operation on the qubit
- */
 void r_y(qubit *q, double alpha) {
     complex a, b;
     double const c = cos(alpha * 0.5);
@@ -178,15 +111,6 @@ void r_y(qubit *q, double alpha) {
     }
 }
 
-/**
- * The function `r_z` applies a rotation around the Z-axis to a qubit with a given angle.
- * 
- * @param q A pointer to a qubit structure. The qubit structure contains a complex array called "value"
- * that represents the state of the qubit. The value[0] element represents the probability amplitude of
- * the |0⟩ state, and the value[1] element represents the probability amplitude of the |
- * @param alpha The parameter "alpha" is a real number that determines the rotation angle in the
- * Z-axis.
- */
 void r_z(qubit *q, double alpha) {
     double const am = alpha * 0.5;
     if (q) if (q->value) {
@@ -195,14 +119,6 @@ void r_z(qubit *q, double alpha) {
     }
 }
 
-/**
- * The function `phase_shift` applies a phase shift to a qubit by multiplying its values by a complex
- * exponential.
- * 
- * @param q The parameter `q` is a pointer to a `qubit` structure.
- * @param delta The parameter "delta" represents the phase shift angle in radians. It determines the
- * amount by which the phase of the qubit is shifted.
- */
 void phase_shift(qubit *q, double delta) {
     complex const eid = cexp(CMPLX(0.0, delta));
     if (q) if (q->value) {
@@ -211,14 +127,6 @@ void phase_shift(qubit *q, double delta) {
     }
 }
 
-/**
- * The function "observe_qubit" returns a random binary value based on the probability of measuring a
- * qubit in the |1> state.
- * 
- * @param q The parameter `q` is a pointer to a qubit structure.
- * 
- * @return The function `observe_qubit` returns a character value.
- */
 char observe_qubit(qubit *q) {
     unsigned long u, m = ~(1 << 31);
     double tmp;
@@ -235,15 +143,9 @@ char observe_qubit(qubit *q) {
     }
 
     return res;
+    
 }
 
-/**
- * The function calculates the expectation value of a qubit.
- * 
- * @param q The parameter "q" is a pointer to a qubit object.
- * 
- * @return the square of the modulus of the second element of the qubit's value array.
- */
 double qubit_expectation(qubit *q) {
     double res = cabs(q->value[1]);
     return res * res;

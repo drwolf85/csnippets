@@ -2,17 +2,6 @@
 #include <math.h>
 #include <omp.h>
 
-/**
- * The function calculates the L-infinity norm of an array of doubles.
- * 
- * @param x x is a pointer to an array of double values. It represents the input vector for which we
- * want to calculate the L-infinity norm.
- * @param n The parameter `n` represents the size of the array `x`. It indicates the number of elements
- * in the array that need to be considered for calculating the L-infinity norm.
- * 
- * @return The function `linf_norm` returns the maximum absolute value of the elements in the array
- * `x`.
- */
 double linf_norm(double *x, int n) {
     int i;
     double res = fabs(*x);

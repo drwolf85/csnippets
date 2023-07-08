@@ -3,11 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/** WARNING: The following code is designed for CPUs 
- *           with byte order based on Little Endian.
- * !Do not use on CPUs with byte order based on Big Endian.
- */
-
 /**
  * @brief Sort vector of indices
  * 
