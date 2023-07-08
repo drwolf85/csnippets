@@ -3,6 +3,7 @@
         "*.embeddedhtml": "html",
         "unistd.h": "c",
         "omp.h": "c",
-        "cmath": "c"
+        "cmath": "c",
+        "math.h": "c"
     }
 }
