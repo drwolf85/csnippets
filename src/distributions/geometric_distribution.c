@@ -3,6 +3,17 @@
 #include <math.h>
 #include <time.h>
 
+/**
+ * The function calculates the probability of a geometric distribution given the number of trials and
+ * the success probability.
+ * 
+ * @param x The parameter "x" represents the number of failures before the first success in a geometric
+ * distribution.
+ * @param prob The parameter "prob" represents the probability of success in a geometric distribution.
+ * 
+ * @return the probability of observing the given number of failures (x) before the first success in a
+ * geometric distribution with the given probability of success (prob).
+ */
 double dgeom(int x, double prob) {
     int i;
     double z = nan("");
@@ -13,6 +24,17 @@ double dgeom(int x, double prob) {
     return z;
 }
 
+/**
+ * The function calculates the probability of observing at least x successes in a geometric
+ * distribution with probability of success prob.
+ * 
+ * @param x The parameter "x" represents the number of trials until the first success occurs in a
+ * geometric distribution.
+ * @param prob The parameter "prob" represents the probability of success in a geometric distribution.
+ * 
+ * @return the probability of observing the first success on the x-th trial in a geometric distribution
+ * with probability of success prob.
+ */
 double pgeom(int x, double prob) {
     int i;
     double tmp, z = nan("");
@@ -22,6 +44,16 @@ double pgeom(int x, double prob) {
     return z;
 }
 
+/**
+ * The function qgeom calculates the quantile of the geometric distribution given a probability and
+ * success probability.
+ * 
+ * @param p The parameter "p" represents the probability of success in a geometric distribution. It
+ * should be a value between 0 and 1, exclusive.
+ * @param prob The parameter "prob" represents the probability of success in a geometric distribution.
+ * 
+ * @return the value of the variable "z".
+ */
 double qgeom(double p, double prob) {
     double z = nan("");
     if (p > 0.0 && p < 1.0 && prob > 0.0 && prob < 1.0) {
@@ -35,6 +67,15 @@ double qgeom(double p, double prob) {
     return z;
 }
 
+/**
+ * The function `rgeom` generates a random number from a geometric distribution with a given
+ * probability.
+ * 
+ * @param prob The parameter "prob" represents the probability of success in a geometric distribution.
+ * It should be a value between 0 and 1, inclusive.
+ * 
+ * @return a double value.
+ */
 double rgeom(double prob) {
     unsigned long u, m;
     double z = nan("");

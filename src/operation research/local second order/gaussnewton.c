@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <omp.h>
-/** FIXME: more comments are needed */
+
 /**
  * It computes the outer product of a triangular matrix with itself
  * 

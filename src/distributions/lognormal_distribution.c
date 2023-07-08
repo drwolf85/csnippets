@@ -3,6 +3,17 @@
 #include <math.h>
 #include <time.h>
 
+/**
+ * The function calculates the probability density of a log-normal distribution at a given value.
+ * 
+ * @param x The parameter "x" represents the value at which you want to evaluate the logarithmic normal
+ * distribution.
+ * @param m The parameter "m" represents the mean of the logarithm of the random variable.
+ * @param s The parameter "s" in the above code represents the standard deviation of the logarithm of
+ * the random variable.
+ * 
+ * @return the value of `z`, which is a double.
+ */
 double dlognorm(double x, double m, double s) {
     double z = 0.0;
     if (x > 0.0) {
@@ -14,6 +25,17 @@ double dlognorm(double x, double m, double s) {
     return z;
 }
 
+/**
+ * The function calculates the cumulative distribution function (CDF) of a log-normal distribution.
+ * 
+ * @param x The parameter "x" represents the value at which you want to evaluate the probability
+ * density function (PDF) of the log-normal distribution.
+ * @param m The parameter "m" represents the mean of the logarithm of the random variable.
+ * @param s The parameter "s" in the above code represents the standard deviation of the logarithm of
+ * the random variable.
+ * 
+ * @return the value of `z`, which is a double.
+ */
 double plognorm(double x, double m, double s) {
     double z = 0.0;
     if (x > 0.0) {
@@ -24,6 +46,20 @@ double plognorm(double x, double m, double s) {
     return z;
 }
 
+/**
+ * The function qlognorm calculates the quantile of a log-normal distribution given a probability,
+ * mean, and standard deviation.
+ * 
+ * @param p The parameter "p" represents the probability value for which we want to find the
+ * corresponding quantile. It should be a value between 0 and 1.
+ * @param m The parameter "m" represents the location parameter of the log-normal distribution. It
+ * determines the location of the peak of the distribution.
+ * @param s The parameter "s" represents the scale parameter of the log-normal distribution. It
+ * determines the spread or width of the distribution.
+ * 
+ * @return a double value, which is the quantile of the log-normal distribution with parameters m
+ * (mean) and s (standard deviation) corresponding to the given probability p.
+ */
 double qlognorm(double p, double m, double s) {
     double old;
     double z = 0.25 * log(p / (1.0 - p)); /* Initial approximation */
@@ -36,6 +72,18 @@ double qlognorm(double p, double m, double s) {
     return s * z + m;
 }
 
+/**
+ * The function rlognorm generates a random number from a log-normal distribution with given mean (mu)
+ * and standard deviation (sd).
+ * 
+ * @param mu The parameter "mu" represents the mean of the logarithm of the random variable you want to
+ * generate.
+ * @param sd The parameter "sd" in the above code refers to the standard deviation of the log-normal
+ * distribution.
+ * 
+ * @return a random number generated from a log-normal distribution with the specified mean (mu) and
+ * standard deviation (sd).
+ */
 double rlognorm(double mu, double sd) {
    unsigned long u, v, m = (1 << 16) - 1;
    double a, b, s;
@@ -53,6 +101,7 @@ double rlognorm(double mu, double sd) {
    return exp(mu + sd * a);
 }
 
+/* Test function */
 int main() {
     double x = 1.64;
     double d, p, q;
