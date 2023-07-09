@@ -14,9 +14,13 @@
  * @return The probability of x given the mean and standard deviation.
  */
 double dlogis(double x, double m, double s) {
-    double z = m - x;
-    s = 1.0 / s; 
-    z = 1.0 / (1.0 + exp(z * s));
+    double z = nan("");
+    x -= m;
+    if (s >= 0.0) {
+        s = 1.0 / s;
+        z = x * s;
+    }
+    z = 1.0 / (1.0 + exp(z));
     return z * (1.0 - z) * s;
 }
 
@@ -31,8 +35,10 @@ double dlogis(double x, double m, double s) {
  * @return The probability of a random variable being less than or equal to x.
  */
 double plogis(double x, double m, double s) {
-    double z = m - x;
-    z /= s; 
+    double z = nan("");
+    x -= m;
+    if (s >= 0.0)
+        z = x / s;
     z = 1.0 + exp(z);
     return 1.0 / z;
 }
@@ -48,7 +54,9 @@ double plogis(double x, double m, double s) {
  * @return The quantile function of the logistic distribution.
  */
 double qlogis(double p, double m, double s) {
-    double z = log(p / (1.0 - p));
+    double z = nan("");
+    if (p >= 0.0 && p <= 1.0 && s >= 0.0) 
+        z = log(p / (1.0 - p));
     return s * z + m;
 }
 
@@ -63,7 +71,6 @@ double qlogis(double p, double m, double s) {
  */
 double rlogis(double mu, double sd) {
    unsigned long u, m = ~(1 << 31);
-   double a, b, s;
    u = rand();
    u &= m;
    return qlogis(ldexp((double) u, -31), mu, sd);
