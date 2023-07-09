@@ -14,8 +14,11 @@
  * @return The probability of x given the mean and standard deviation.
  */
 double dtriang(double x, double m, double s) {
-    double z = x - m;
-    s = 1.0 / s;
+    double z = nan(""); 
+    if (s >= 0.0) {
+        z = x - m;
+        s = 1.0 / s;
+    }
     z *= s;
     z = (z >= -1.0) * (z <= 1.0) * (1.0 - fabs(z));
     return z * s;
@@ -32,10 +35,12 @@ double dtriang(double x, double m, double s) {
  * @return The probability of a random variable being less than or equal to x.
  */
 double ptriang(double x, double m, double s) {
-    double z;
+    double z = nan("");
     x -= m;
-    x /= s;
-    z = 1.0 - fabs(x);
+    if (s >= 0.0) {
+        x /= s;
+        z = 1.0 - fabs(x);
+    }
     z *= (z > 0.0) * z * 0.5;
     z += (x >= 0) * (1.0 - 2.0 * z);
     return z;
