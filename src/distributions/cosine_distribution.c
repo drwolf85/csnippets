@@ -82,6 +82,7 @@ double rcos(double mu, double sd) {
    return qcos(ldexp((double) u, -31), mu, sd);
 }
 
+/* Test function */
 int main() {
     double x = -1.64;
     double d, p, q;

@@ -69,6 +69,7 @@ double rlogis(double mu, double sd) {
    return qlogis(ldexp((double) u, -31), mu, sd);
 }
 
+/* Test function */
 int main() {
     double x = -1.64;
     double d, p, q;

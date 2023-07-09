@@ -86,6 +86,7 @@ double rnorm(double mu, double sd) {
    return mu + sd * a;
 }
 
+/* Test function */
 int main() {
     double x = -1.64;
     double d, p, q;
