@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 
-double inline lbeta(double a, double b) {
+double lbeta(double a, double b) {
     double res = lgamma(a);
     res += lgamma(b);
     res -= lgamma(a + b);
@@ -15,6 +15,7 @@ double beta(double a, double b) {
 
 /* Test function */
 int main() {
+    printf("lbeta(5, 2) = %f\n", lbeta(5,2));
     printf("beta(5, 2) = %f\n", beta(5,2));
     return 0;
 }
