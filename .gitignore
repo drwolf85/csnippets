@@ -4,6 +4,8 @@
 /src/inzr_resid.c
 /src/.*c
 /src/.*R
+.*c
+.*R
 
 github
 
