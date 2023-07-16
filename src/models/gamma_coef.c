@@ -121,7 +121,7 @@ void lm_coef(double *coef, double *y, double *dta, int *dim) {
 }
 
 /**
- * @brief Gamma (linear) Regression
+ * @brief Gamma (linear) Regression (with log-link function)
  * 
  * @param coef empty vector to store the output
  * @param py response vector (example data for model output)
