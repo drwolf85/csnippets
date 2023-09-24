@@ -15,13 +15,13 @@ typedef struct {
 } values;
 
 /**
- * It compares two values, and returns -1 if the first 
+ * It compares two values, and returns -1 if the first
  * is less than the second, 0 if they are equal,
  * and 1 if the first is greater than the second
- * 
+ *
  * @param aa the first value to compare
  * @param bb the value to compare to
- * 
+ *
  * @return the difference between the two values
  */
 int cmp_values(const void *aa, const void *bb) {
@@ -40,7 +40,7 @@ int cmp_values(const void *aa, const void *bb) {
 /**
  * The function calculates the probability of each element in a vector being the minimum value across
  * all elements in the vector.
- * 
+ *
  * @param pr `pr` is a pointer to an array of doubles that will store the output probabilities. The
  * function `mvecdf_prob` calculates the probabilities and stores them in this array.
  * @param x x is a pointer to a double array containing the data for which the probability is to be
@@ -76,7 +76,7 @@ void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
 
 /**
  * The function computes the empirical cumulative distribution function of a matrix.
- * 
+ *
  * @param pr `pr` is a pointer to an array of doubles that will store the computed empirical cumulative
  * distribution function.
  * @param x The input matrix x, which is a double pointer to a one-dimensional array of size n*p. It
@@ -133,7 +133,7 @@ void mvprd_fuzz(double *pr, double *x, int *_n, int *_p) {
 
 /**
  * The function approximate the empirical cumulative distribution function of a matrix.
- * 
+ *
  * @param pr `pr` is a pointer to an array of doubles that will store the output of the function. It
  * will contain the values of the empirical cumulative distribution function computed by the function.
  * @param x The parameter `x` is a pointer to a double array containing the data matrix. The matrix has
@@ -202,7 +202,7 @@ void mvgdl_fuzz(double *pr, double *x, int *_n, int *_p) {
 // pr <- .C("mvprd_fuzz", pr = pr, x, n, p, DUP = FALSE)$pr
 // par(mfrow=c(2, 2))
 // plot(x, cex = exp(pr - mean(pr) + 1) - 1, asp = 1)
-// plot(x, type = "n", asp = 1)    
+// plot(x, type = "n", asp = 1)
 // text(x, labels = round(pr, 3))
 // th <- apply(pnorm(x), 1, prod)
 // plot(th, pr, xlim = 0:1, ylim = 0:1); abline(0:1, col=8)
@@ -218,7 +218,7 @@ void mvgdl_fuzz(double *pr, double *x, int *_n, int *_p) {
 // pr <- .C("mvprd_fuzz", pr = pr, x, n, p, DUP = FALSE)$pr
 // par(mfrow=c(2, 2))
 // plot(x, cex = exp(pr - mean(pr) + 1) - 1, asp = 1)
-// plot(x, type = "n", asp = 1)    
+// plot(x, type = "n", asp = 1)
 // text(x, labels = round(pr, 3))
 // th <- apply(pnorm(x), 1, prod)
 // plot(th, pr, xlim = 0:1, ylim = 0:1); abline(0:1, col=8)
