@@ -39,7 +39,7 @@ double plogis(double x, double m, double s) {
     x -= m;
     if (s >= 0.0)
         z = x / s;
-    z = 1.0 + exp(z);
+    z = 1.0 + exp(-z);
     return 1.0 / z;
 }
 

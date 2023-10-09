@@ -54,7 +54,7 @@ double qlaplace(double p, double m, double s) {
     double sgn = 2.0 * (double) (p < 0.5) - 1.0;
     if (p >= 0.0 && p <= 1.0 && s >= 0.0) 
         z = 2.0 * fabs(p - 0.5);
-    return s * sgn * log(1.0 - z) + m;
+    return s * sgn * log1p(-z) + m;
 }
 
 /** 
