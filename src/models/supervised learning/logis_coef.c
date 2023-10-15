@@ -225,4 +225,4 @@ void logis_coef(double *coef, double *py, double *pdta, int *dim) {
 // system.time(b <- .C("logis_coef", coef = double(p), y, X, dim(X), DUP = FALSE)$coef)
 // system.time(print(cc <- glm(y ~ 0 + X, family = "binomial")$coef, digit = 22))
 // print(b, digit = 22)
-// sum((y-plogis(X%*%cc))^2); sum((y- plogis(X%*%b))^2)
+// sum((y-plogis(X%*%cc))^2); sum((y-plogis(X%*%b))^2)

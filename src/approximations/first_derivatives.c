@@ -80,7 +80,7 @@ double directional_derivative(double *x0, int n, double *delta, double h, double
  void gradient(double *grad, double *x0, int n, double h, double htype, double(*f)(double *, int)) {
     int i;
     double *xl, *xr;
-    double ih = 1.0 / h;
+    double const ih = 1.0 / h;
     xl = (double *) malloc(n * sizeof(double));
     xr = (double *) malloc(n * sizeof(double));
     if (xl && xr && grad) {
@@ -116,7 +116,7 @@ int main() {
     double x[] = {0.1, 0.5, 0.9};
     double delta[] = {1.0, 1.0, 1.0};
 
-    printf("First derivative of exp(x) in x = 1: %f\n", deriv1(1.0, 1e-12, 0.5, exp));
+    printf("First derivative of exp(x) in x = 1: %f\n", deriv1(1.0, 1e-6, 0.5, exp));
 
     printf("Directional derivative of `myfun` in x = (");
     for (i = 0; i < 2; i++) {
@@ -128,14 +128,14 @@ int main() {
         printf("%.0f, ", delta[i]);
     }
     printf("%.0f)", delta[i]);
-    printf(": %f\n", directional_derivative(x, 3, delta, 1e-12, 0.5, myfun));
+    printf(": %f\n", directional_derivative(x, 3, delta, 1e-6, 0.5, myfun));
 
     printf("Gradient of `myfun` in x = (");
     for (i = 0; i < 2; i++) {
         printf("%.1f, ", x[i]);
     }
     printf("%.1f) ", x[i]);
-    gradient(delta, x, 3, 1e-12, 0.5, myfun);
+    gradient(delta, x, 3, 1e-6, 0.5, myfun);
     printf(":\n\t(");
     for (i = 0; i < 2; i++) {
         printf("%f, ", delta[i]);
