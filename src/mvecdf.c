@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -75,7 +76,7 @@ void mvecdf_prob(double *pr, double *x, int *_n, int *_p) {
 }
 
 /**
- * The function computes the empirical cumulative distribution function of a matrix.
+ * The function approximate the empirical cumulative distribution function of a matrix.
  *
  * @param pr `pr` is a pointer to an array of doubles that will store the computed empirical cumulative
  * distribution function.
@@ -99,7 +100,7 @@ void mvprd_fuzz(double *pr, double *x, int *_n, int *_p) {
     v = (values *) malloc(n * p * sizeof(values));
     o = (double *) malloc(n * p * sizeof(double));
     if (v && o) {
-        /* Organize the data of a matrix in a stracture values */
+        /* Organize the data of a matrix in a structure values */
         // #pragma omp parallel for private(i, j) collapse(2)
         for (j = 0; j < p; j++) {
             for (i = 0; i < n; i++) {
@@ -132,7 +133,7 @@ void mvprd_fuzz(double *pr, double *x, int *_n, int *_p) {
 }
 
 /**
- * The function approximate the empirical cumulative distribution function of a matrix.
+ * The function approximates the empirical cumulative distribution function of a matrix.
  *
  * @param pr `pr` is a pointer to an array of doubles that will store the output of the function. It
  * will contain the values of the empirical cumulative distribution function computed by the function.
@@ -153,7 +154,7 @@ void mvgdl_fuzz(double *pr, double *x, int *_n, int *_p) {
     v = (values *) malloc(n * p * sizeof(values));
     o = (double *) malloc(n * p * sizeof(double));
     if (v && o) {
-        /* Organize the data of a matrix in a stracture values */
+        /* Organize the data of a matrix in a structure values */
         // #pragma omp parallel for private(i, j) collapse(2)
         for (j = 0; j < p; j++) {
             for (i = 0; i < n; i++) {
