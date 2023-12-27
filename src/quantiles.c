@@ -164,6 +164,85 @@ double quantile(double *x, size_t n, double prob) {
     return res;
 }
 
+double * fivenum(double *x, size_t n) {
+    double target;
+    size_t i, nnan = 0;
+    long pos;
+    double prob[5] = {0.0, 0.25, 0.5, 0.75, 1.0};
+    double *res;
+    values *v;
+
+    v = (values *) malloc(n * sizeof(values));
+    res = (double *) malloc(5 * sizeof(double));
+    if (v && res) {
+        #pragma omp parallel for simd 
+        for (i = 0; i < 5; i++) res[i] = nan("");
+        #pragma omp parallel for simd reduction(+ : nnan)
+        for (i = 0; i < n; i++) {
+            v[i].v = x[i];
+            v[i].i = i;
+            nnan += isnan(x[i]);
+        }
+        nnan = n - nnan;
+        qsort(v, n, sizeof(values), cmp_values);
+        /* Using linear interpolation between points */
+        #pragma omp parallel for private(target, pos) 
+        for (i = 0; i < 5; i++) {
+            target = prob[i] * (double) nnan;
+            pos = (long) target - 1;
+            pos *= (pos > 0);
+            res[i] = v[pos].v;
+            prob[i] = target - (double) ((size_t) target);
+            res[i] += prob[i] *(v[pos + 1].v - res[i]);
+        }
+    }
+    free(v); 
+    return res;
+}
+
+double * quantiles(double *x, size_t n, double *prob, size_t m) {
+    double target;
+    size_t i, nnan = 0;
+    long pos;
+    double prb, *res;
+    values *v;
+
+    v = (values *) malloc(n * sizeof(values));
+    res = (double *) malloc(m * sizeof(double));
+    if (v && res) {
+        #pragma omp parallel for simd 
+        for (i = 0; i < m; i++) res[i] = nan("");
+        #pragma omp parallel for simd reduction(+ : nnan)
+        for (i = 0; i < n; i++) {
+            v[i].v = x[i];
+            v[i].i = i;
+            nnan += isnan(x[i]);
+        }
+        nnan = n - nnan;
+        qsort(v, n, sizeof(values), cmp_values);
+        /* Using linear interpolation between points */
+        #pragma omp parallel for private(target, pos, prb) 
+        for (i = 0; i < m; i++) {
+            target = prob[i] * (double) nnan;
+            pos = (long) target - 1;
+            pos *= (pos > 0);
+            res[i] = v[pos].v;
+            prb = target - (double) ((size_t) target);
+            res[i] += prb *(v[pos + 1].v - res[i]);
+        }
+    }
+    free(v); 
+    return res;
+}
+
+double IQR(double *x, size_t n) {
+    double prob[2] = {0.25, 0.75};
+    double *qrts = quantiles(x, n, prob, 2);
+    double res = qrts[1] - qrts[0];
+    free(qrts);
+    return(res);
+}
+
 /* Testing function */
 int main() {
     double x[50] = { 1.04612564, -1.00765414, -0.95323787,  0.89483371, -0.74488022,  0.06825251,
@@ -175,9 +254,16 @@ int main() {
                      0.47390399, -0.27336268, -0.19206190, -0.53284985, -0.87518074,  2.08260175,
                      0.52642028,  0.25721542,  0.59677736,  0.12434588, -0.02864796, -0.75645200,
                      0.02485415,  1.09674453 };
+    double *fn = fivenum(x, 50);
+    size_t i;
     printf("Minimum of x = %f\n", minimum_value(x, 50));
     printf("Maximum of x = %f\n", maximum_value(x, 50));
     printf("Range of x = %f\n", range(x, 50));
     printf("Third quartile of x = %f\n", quantile(x, 50, 0.75));
+    printf("Five numbers of x are ");
+    for (i = 0; i < 5; i++) printf("%0.6f ", fn[i]);
+    printf("\n");
+    printf("IQR of x = %f\n", IQR(x, 50));
+    free(fn);
     return 0;
 }
