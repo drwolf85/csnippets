@@ -31,7 +31,7 @@ int cmp_vals(void const *aa, void const *bb) {
  * @param n Length of the vector of `values`
  * @return size_t 
  */
-long long binary_search(double x, values *v, size_t n) {
+static inline long long binary_search(double x, values *v, size_t n) {
     long long  tmp, low, mid, high, res = -1;
     low = 0;
     high = n - 1;
@@ -107,7 +107,7 @@ double mecdf(double *x, double *dta, size_t n, size_t p) {
     /* Estimation of the function */
     for (i = 0; (long long) i <= mnpos; i++) {
         tmp = 1;
-        for (j = 0; j < p; j++) {
+        for (j = 0; j < p && tmp; j++) {
             tmp &= (dta[j * n + v[whv][i].i] <= x[j]);
         }
         res += (double) tmp;
