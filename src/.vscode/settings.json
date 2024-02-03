@@ -4,6 +4,7 @@
         "math.h": "c",
         "random": "c",
         "omp.h": "c",
-        "vector": "c"
+        "vector": "c",
+        "algorithm": "c"
     }
 }
