@@ -4,7 +4,7 @@
 
 #define DEFAULT_RHO 0.8
 #define DEFAULT_SIGMA 1.01
-#define MAX_ITER 1000
+#define MAX_ITER 100
 #define MY_EPS_TOLL 1e-9
 
 /**

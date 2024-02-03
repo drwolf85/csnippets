@@ -1,11 +1,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#ifdef DEBUG
+#include <stdio.h>
+#endif
 
 #define DEFAULT_RHO 0.8
 #define DEFAULT_SIGMA 1.01
 #define DEFAULT_ALPHA 1.0
-#define MAX_ITER 100
+#define MAX_ITER 10
 #define MY_EPS_TOLL 1e-9
 
 /**
@@ -18,10 +21,12 @@
  * @param b A pointer to a vector of constraint totals
  * @param p Number of linear constraints
  * @param rho Penalty parameter (like a Lagrangian multiplier)
- * @param sigma Scaling parameter operating on `rho`
- * @param T Number of void iterations on the updates of `rho` 
+ * @param sigma Scaling parameter operating on `alpha` 
+ * @param alpha Scaling parameter operating on `rho`
+ * @param T Number of void iterations on the updates of `alpha` 
+ * @param approx Non-zero if the EPM approximation is used 
  */
-void mpec_admm_lin(double *x, double *c, size_t n, double *A, double *b, size_t p, double rho, double sigma, double alpha, size_t T) {
+void mpec_admm_lin(double *x, double *c, size_t n, double *A, double *b, size_t p, double rho, double sigma, double alpha, size_t T, char approx) {
     size_t i, j, t = 1;
     double sr, dec, inprd;
     double L = fabs(*c);
@@ -86,7 +91,26 @@ void mpec_admm_lin(double *x, double *c, size_t n, double *A, double *b, size_t 
                 for (i = 0; i < n; i++)
                     v[i] = x[i] * inprd;
             }
-            /* Updating penalty parameter */
+            if (!approx) {
+                inprd = 0.0;
+                for (i = 0; i < n; i++)
+                    inprd += x[i] * v[i];
+                sr = - rho - alpha * (double) n;
+                for (i = 0; i < n; i++) {
+                    g[i] = (sr + alpha * inprd) * x[i]; 
+                    v[i] -= g[i];
+                }
+                sr = fabs(*v);
+                for (i = 1; i < n; i++) {
+                    dec = fabs(v[i]) - sr;
+                    sr += (double) (dec > 0.0) * dec;
+                }
+                sr = sr > 0.0 ? 1.0 / sr : 1.0;
+                for (i = 0; i < n; i++) {
+                    v[i] *= sr;
+                }
+            }
+             /* Updating penalty parameter */
             rho += alpha * (n - inprd);
             sr = (sigma - 1.0) * alpha;
             alpha += (double) !(t % T) * sr;
@@ -100,7 +124,6 @@ void mpec_admm_lin(double *x, double *c, size_t n, double *A, double *b, size_t 
 
 /* Test function */
 #ifdef DEBUG
-#include <stdio.h>
 #define N 5
 void main() {
     double x[N] = {0};
@@ -112,13 +135,13 @@ void main() {
     int const p = 2;
     int i;
 
-    printf("Binary optim without linear constraints:\n");
-    mpec_admm_lin(x, c, N, 0, 0, 0, -1.0, -1.0, -1.0, 15);
+    printf("Binary optim without linear constraints with gradient approximation on v:\n");
+    mpec_admm_lin(x, c, N, 0, 0, 0, -1.0, -1.0, -1.0, 5, 0);
     for (i = 0; i < N; i++)
         printf("x[%d] = %f -> %d\n", i, x[i], (int) (x[i] >= 0.0));
 
-    printf("\nBinary optim with linear constraints:\n");
-    mpec_admm_lin(x, c, N, A, b, p, -1.0, -1.0, -1.0, 15);
+    printf("\nBinary optim with linear constraints with EPM approximation on v:\n");
+    mpec_admm_lin(x, c, N, A, b, p, -1.0, -1.0, -1.0, 5, 1);
     for (i = 0; i < N; i++)
         printf("x[%d] = %f -> %d\n", i, x[i], (int) (x[i] >= 0.0));
 }
