@@ -23,7 +23,7 @@ void wlm_resid(double *res, double *py, double *w, double *pdta, int *dim) {
     iw = (double *) malloc(dim[0] * sizeof(double));
     vec = (double *) malloc(dim[1] * sizeof(double));
     memset(res, 0, dim[0] * sizeof(double));
-    if (q && y && dta && iw) {
+    if (q && y && dta && iw && vec) {
         /* Adjust data for the weights */
         for (i = 0; i < dim[0]; i++) {
             iw[cnt] = sqrt(w[i]);
@@ -35,42 +35,46 @@ void wlm_resid(double *res, double *py, double *w, double *pdta, int *dim) {
             for (j = 0; j < dim[1]; j++) {
                 dta[cnt * j + k] = pdta[*dim * j + i] * iw[k];
             }
-            iw[k] = 1.0 / iw[k];
             k += (int) (w[i] > 0.0 && isfinite(w[i]) && isfinite(py[i]));
         }
+        printf("%d %d\n", cnt, k);
+        /* Invert the sqrt of the weights */
+        #pragma omp for simd
+        for (j = 0; j < cnt; j++)
+                iw[j] = 1.0 / iw[j];
         /* Computing matrix Q */
         for (i = 0; i < dim[1]; i++) {
             #pragma omp for simd
             for (j = 0; j < cnt; j++)
-                q[*dim * i + j] = dta[*dim * i + j];
+                q[cnt * i + j] = dta[cnt * i + j];
             for (k = 0; k < i; k++) {
                 tmp = 0.0;
                 v = 0.0;
                 for (j = 0; j < cnt; j++) {
-                    tmp += q[*dim * k + j] * dta[*dim * i + j];
-                    v += q[*dim * k + j] * q[*dim * k + j];
+                    tmp += q[cnt * k + j] * dta[cnt * i + j];
+                    v += q[cnt * k + j] * q[cnt * k + j];
                 }
                 tmp /= v;
                 #pragma omp for simd
                 for (j = 0; j < cnt; j++) 
-                    q[*dim * i + j] -= tmp * q[*dim * k + j];
+                    q[cnt * i + j] -= tmp * q[cnt * k + j];
             }
             /* Normalization of the column vector */
             tmp = 0.0;
             for (j = 0; j < cnt; j++)
-                tmp += q[*dim * i + j] * q[*dim * i + j];
+                tmp += q[cnt * i + j] * q[cnt * i + j];
             tmp = sqrt(tmp);
             itmp = 1.0 / tmp;
             #pragma omp for simd
             for (j = 0; j < cnt; j++)
-                q[*dim * i + j] *= itmp;
+                q[cnt * i + j] *= itmp;
         }
         /* Computing least weighted square residuals (Q^t W^{0.5} y)*/
         for (k = 0; k < dim[1]; k++) {
             tmp = 0.0;
             #pragma omp for simd
             for (j = 0; j < cnt; j++) {
-                tmp += q[*dim * k + j] * y[j];
+                tmp += q[cnt * k + j] * y[j];
             }
             vec[k] = tmp;
         }
@@ -78,9 +82,10 @@ void wlm_resid(double *res, double *py, double *w, double *pdta, int *dim) {
         for (j = 0; j < cnt; j++) {
             tmp = 0.0;
             for (k = 0; k < dim[1]; k++) {
-                tmp += q[*dim * k + j] * vec[k];
+                tmp += q[cnt * k + j] * vec[k];
             }
-            res[j] = y[j] - iw[j] * tmp;
+            res[j] = y[j] - tmp;
+            res[j] *= iw[j];
         }
     }
     free(q);
@@ -96,6 +101,6 @@ void wlm_resid(double *res, double *py, double *w, double *pdta, int *dim) {
 // y <- X %*% rnorm(p, 1) + rnorm(n, 0, .2)
 // w <- runif(n, 0.25, 4)
 // dyn.load("test.so")
-// b <- .C("wlm_coef", res = double(n), y, w, X, dim(X), DUP = FALSE)$res
-// print(fit <- lm(y ~ 0 + X, weights = w)$coef, digit = 22)
-// print(fabs(resid(fit) - b), digit = 22)
+// b <- .C("wlm_resid", res = double(n), y, w, X, dim(X), DUP = FALSE)$res
+// print(fit <- lm(y ~ 0 + X, weights = w), digit = 22)
+// cbind(b, resid(fit))
