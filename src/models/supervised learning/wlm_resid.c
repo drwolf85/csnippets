@@ -28,7 +28,7 @@ void wlm_resid(double *res, double *py, double *w, double *pdta, int *dim) {
         for (i = 0; i < dim[0]; i++) {
             iw[cnt] = sqrt(w[i]);
             y[cnt] = py[i] * iw[cnt];
-            cnt += (int) (w[i] > 0.0 && isfinite(w[i]));
+            cnt += (int) (w[i] > 0.0 && isfinite(w[i]) && isfinite(py[i]));
         }
         for (i = 0; i < dim[0]; i++) {
             #pragma omp for simd
@@ -36,7 +36,7 @@ void wlm_resid(double *res, double *py, double *w, double *pdta, int *dim) {
                 dta[cnt * j + k] = pdta[*dim * j + i] * iw[k];
             }
             iw[k] = 1.0 / iw[k];
-            k += (int) (w[i] > 0.0 && isfinite(w[i]));
+            k += (int) (w[i] > 0.0 && isfinite(w[i]) && isfinite(py[i]));
         }
         /* Computing matrix Q */
         for (i = 0; i < dim[1]; i++) {
