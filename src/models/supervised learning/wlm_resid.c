@@ -37,7 +37,6 @@ void wlm_resid(double *res, double *py, double *w, double *pdta, int *dim) {
             }
             k += (int) (w[i] > 0.0 && isfinite(w[i]) && isfinite(py[i]));
         }
-        printf("%d %d\n", cnt, k);
         /* Invert the sqrt of the weights */
         #pragma omp for simd
         for (j = 0; j < cnt; j++)
@@ -84,8 +83,15 @@ void wlm_resid(double *res, double *py, double *w, double *pdta, int *dim) {
             for (k = 0; k < dim[1]; k++) {
                 tmp += q[cnt * k + j] * vec[k];
             }
-            res[j] = y[j] - tmp;
-            res[j] *= iw[j];
+            y[j] -= tmp;
+            y[j] *= iw[j];
+        }
+        /* Copy results */
+        cnt = 0;
+        for (i = 0; i < dim[0]; i++) {
+            k = (int) (w[i] > 0.0 && isfinite(w[i]) && isfinite(py[i]));
+            res[i] = y[cnt] * (double) k + py[i] * (double) (1 - k);
+            cnt += k;
         }
     }
     free(q);
