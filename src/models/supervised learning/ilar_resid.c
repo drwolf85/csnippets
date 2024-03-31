@@ -7,10 +7,10 @@
 #define MAX_ITER 100
 
 /**
-@brief Inverse of an Upper Triangular Matrix
-@param mat upper triangular matrix (in column major format)
-@param nn number of rows in the matrix `mat` 
-*/
+ * @brief Inverse of an Upper Triangular Matrix
+ * @param mat upper triangular matrix (in column major format)
+ * @param nn number of rows in the matrix `mat` 
+ */
 void inverseUT(double *mat, int *nn) {
     int i, j, k, pos, n = *nn;
     double tmp;
@@ -28,12 +28,12 @@ void inverseUT(double *mat, int *nn) {
 }
 
 /**
-@brief Residuals of a linear model (based on OLS)
-@param res empty vector to store the residuals (in output)
-@param y response vector (example data for model output)
-@param dta matrix of data (column-major format)
-@param dim vector of dimension of `dta` matrix
-*/
+ * @brief Residuals of a linear model (based on OLS)
+ * @param res empty vector to store the residuals (in output)
+ * @param y response vector (example data for model output)
+ * @param dta matrix of data (column-major format)
+ * @param dim vector of dimension of `dta` matrix
+ */
 void lm_resid(double *res, double *y, double *dta, int *dim) {
     int i, j, k;
     double itmp, tmp, v;
@@ -90,14 +90,16 @@ void lm_resid(double *res, double *y, double *dta, int *dim) {
     free(vec);
 }
 
+/** FIXME: include wlm_resid */
+
 /**
-@brief Weighted Linear Regression
-@param coef empty vector to store the output
-@param py response vector (example data for model output)
-@param w vector of weights
-@param pdta matrix of data (column-major format)
-@param dim vector of dimension of `dta` matrix
-*/
+ * @brief Weighted Linear Regression
+ * @param coef empty vector to store the output
+ * @param py response vector (example data for model output)
+ * @param w vector of weights
+ * @param pdta matrix of data (column-major format)
+ * @param dim vector of dimension of `dta` matrix
+ */
 void wlm_coef(double *coef, double *py, double *w, double *pdta, int *dim) {
     int i, j, k;
     double itmp, tmp, v;
@@ -169,12 +171,12 @@ void wlm_coef(double *coef, double *py, double *w, double *pdta, int *dim) {
 }
 
 /**
-@brief Iterated least absolute residuals
-@param res empty vector to store the residulas
-@param py response vector (example data for model output)
-@param pdta matrix of data (column-major format)
-@param dim vector of dimension of `dta` matrix
-*/
+ * @brief Iterated least absolute residuals
+ * @param res empty vector to store the residulas
+ * @param py response vector (example data for model output)
+ * @param pdta matrix of data (column-major format)
+ * @param dim vector of dimension of `dta` matrix
+ */
 void ilar_resid(double *res, double *py, double *pdta, int *dim) {
     int i, j, k = 0;
     double *w, *coef;
@@ -188,6 +190,43 @@ void ilar_resid(double *res, double *py, double *pdta, int *dim) {
         for (i = 0; i < dim[0]; i++) { /* Compute the weights */
             w[i] = 1.0 / fabs(res[i]);
             w[i] = isfinite(w[i]) ? w[i] : 1.0;
+        }
+        wlm_coef(coef, py, w, pdta, dim);
+        for (i = 0; i < dim[0]; i++) { /* Compute the residuals */
+            res[i] = 0.0;
+            for (j = 0; j < dim[1]; j++) {
+                res[i] -= pdta[*dim * j + i] * coef[j];
+            }
+            res[i] += py[i];
+        }
+        k++;
+    }
+    while (k < MAX_ITER);
+    free(w);
+    free(coef);
+}
+
+/**
+ * @brief Weighted Iterated least absolute residuals
+ * @param res empty vector to store the residulas
+ * @param py response vector (example data for model output)
+ * @param pdta matrix of data (column-major format)
+ * @param dim vector of dimension of `dta` matrix
+ * @param pw vector of weights of length `dim[0]`
+ */
+void wilar_resid(double *res, double *py, double *pdta, int *dim, double *pw) {
+    int i, j, k = 0;
+    double *w, *coef;
+
+    w = (double *) malloc(dim[0] * sizeof(double));
+    coef = (double *) malloc(dim[1] * sizeof(double));
+    /* Get OLS residuals for a linear model */
+    lm_resid(res, py, pdta, dim); /** FIXME: wlm_resid */
+    if (coef && w) do { /* Get WOLS residuals (iteratively) */
+        #pragma omp for simd
+        for (i = 0; i < dim[0]; i++) { /* Compute the weights */
+            w[i] = pw[i] / fabs(res[i]);
+            w[i] = isfinite(w[i]) ? w[i] : pw[i];
         }
         wlm_coef(coef, py, w, pdta, dim);
         for (i = 0; i < dim[0]; i++) { /* Compute the residuals */
