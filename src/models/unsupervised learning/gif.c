@@ -18,6 +18,7 @@ typedef struct iso_tree {
     double threshold;
 } iTrees;
 
+double *H;
 uint32_t *subs;
 double *proj;
 // #pragma omp threadprivate(subs, proj)
@@ -29,8 +30,7 @@ double *proj;
  * @return double 
  */
 static inline double cfun(uint32_t n) {
-    double const H = log((double) n) + 0.5772156649;
-    return 2.0 * (H - (double) (n - 1) / (double) n);
+    return 2.0 * (H[n - 2] - (double) (n - 1) / (double) n);
 }
 
 /**
@@ -74,6 +74,18 @@ static inline double rnorm(double mu, double sd) {
 }
 
 /**
+ * @brief Swap information at two pointers to `uint32_t`
+ * 
+ * @param a First pointer to swap
+ * @param b Second pointer to swap
+ */
+static inline void swap(uint32_t *a, uint32_t *b) {
+    uint32_t z = *a;
+    *a = *b;
+    *b = z;
+}
+
+/**
  * @brief Subsampling routine
  * 
  * @param nr Number of records in the dataset
@@ -83,17 +95,15 @@ static inline void sample(uint32_t nr, uint32_t psi) {
     uint32_t i, tmp, sel = 0;
     subs = (uint32_t *) calloc(nr, sizeof(uint32_t));
     proj = (double *) malloc(nr * sizeof(double));
-    if (subs) if (nr == psi) {
+    if (subs) if (psi >= nr) {
         // #pragma omp for simd
         for (i = 0; i < nr; i++)
             subs[i] = 1;
     } 
     else if (psi < nr) {
-        for (i = 0; sel < psi; i++) { /** FIXME: change algorithm because rand is not good for openMP */
-            tmp = (uint32_t) (rand() & 1);
-            subs[i % nr] = tmp; /* selected if random number is odd */
-            sel += tmp;
-        }
+        for (i = 0; i < psi; i++) subs[i] = 1;
+        for (i = 0; i < nr; i++) /** FIXME: change algorithm because rand is not good for openMP */
+            swap(&subs[i], &subs[(uint32_t) rand() % nr]);
     }
     else {
         free(subs);
@@ -242,17 +252,18 @@ double path_length(double *x, uint32_t nv, iTrees *tree, uint8_t e) {
  * @param x Pointer to an input vector
  * @param nv Number of variables
  * @param Forest Pointer to a foreset (i.e., double pointer to trees)
- * @param t Number of trees in the forest
- * @param psi Number of subsamples used to construct the trees in the forestuint32_t t, 
+ * @param t Pointer to number of trees in the forest
+ * @param psi Pointer to number of subsamples used to construct the trees in the forestuint32_t t, 
  * @return double 
  */
-double anomaly_score(double *x, uint32_t nv, iTrees **Forest, uint32_t t, uint32_t psi) {
+double anomaly_score(double *x, int nv, iTrees **Forest, int *t, int *psi) {
     double avglen = 0.0;
     uint32_t i;
-    for (i = 0; i < t; i++) {
-        avglen += path_length(x, nv, Forest[i], 0);
+    uint32_t it = (uint32_t) *t;
+    for (i = 0; i < it; i++) {
+        avglen += path_length(x, (uint32_t) nv, Forest[i], 0);
     }
-    avglen /= cfun(psi) * (double) t;
+    avglen /= cfun((uint32_t) *psi) * (double) it;
     return pow(2.0, - avglen);
 }
 
@@ -276,10 +287,47 @@ void free_tree(iTrees *tree) {
  * @param Forest Pointer to pointer of the allocated tress
  * @param t Number of trees in the forest
  */
-void free_forest(iTrees **Forest, uint32_t t) {
+static inline void free_forest(iTrees **Forest, int *t) {
     uint32_t i;
-    for (i = 0; i < t; i++) {
+    for (i = 0; i < (uint32_t) *t; i++) {
         free_tree(Forest[i]);
     }
     free(Forest);
 }
+
+void gif(double *res, double *dta, int *dimD, int *nt, int *nss) {
+    uint32_t i, j;
+    iTrees **forest;
+    double *dat;
+    
+    if (*nss <= 0) return;
+    if (*nt <= 0) return;
+    if (dimD[0] <= 0 || dimD[1] <= 0) return;
+
+    H = (double *) malloc(dimD[0] * sizeof(double));
+    dat = (double *) malloc(dimD[1] * sizeof(double));
+    if (H && dat) {
+        H[0] = 1.0;
+        for (i = 1; i < (uint32_t) *nss; i++) 
+            H[i] = H[i - 1] + 1.0 / (1.0 + (double) i);
+        forest = iForest(dta, dimD, nt, nss);
+        for (i = 0; i < (uint32_t) dimD[0]; i++) {
+            for (j = 0; j < (uint32_t) dimD[1]; j++)
+                dat[j] = dta[dimD[0] * j + i];
+            res[i] = anomaly_score(dat, dimD[1], forest, nt, nss);
+        }
+        free_forest(forest, nt);
+    }
+    free(H);
+    free(dat);
+}
+
+/*
+data(iris)
+dyn.load("test.so")
+dta <- iris[, 1L:4L]
+anom <- .C("gif", res = double(nrow(dta)), as.matrix(scale(dta)), dim(dta), 1000L, 108L)$res
+hist(anom)
+pairs(dta, col = iris$Species, pch = c(1, 19)[1+(anom > 0.7)], cex = 2)
+mean(anom > 0.7)
+*/
