@@ -80,7 +80,7 @@ void wlm_coef(double *coef, double *py, double *w, double *pdta, int *dim) {
             itmp = 1.0 / tmp;
             #pragma omp for simd
             for (j = 0; j < dim[0]; j++)
-                q[*dim * i + j] *=itmp;
+                q[*dim * i + j] *= itmp;
         }
         /* Invert matrix R */
         inverseUT(r, &dim[1]);

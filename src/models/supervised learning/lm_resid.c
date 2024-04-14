@@ -75,3 +75,4 @@ void lm_resid(double *res, double *y, double *dta, int *dim) {
 // b <- .C("lm_resid", res = double(n), y, X, dim(X), DUP = FALSE)$res
 // print(err <- resid(lm(y ~ 0 + X)), digit = 22)
 // print(b, digit = 22)
+// cbind(err, b)
