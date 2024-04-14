@@ -4,6 +4,7 @@
 #include <math.h>
 #include <time.h>
 // #include <omp.h>
+
 /**
  * @brief Isolation tree structure
  * 
@@ -24,7 +25,7 @@ double *proj;
 // #pragma omp threadprivate(subs, proj)
 
 /**
- * @brief Normalizing factor
+ * @brief Normalizing factors (i.e., vector of harmonic numbers)
  * 
  * @param n an integer number
  * @return double 
@@ -95,7 +96,7 @@ static inline void sample(uint32_t nr, uint32_t psi) {
     uint32_t i, tmp, sel = 0;
     subs = (uint32_t *) calloc(nr, sizeof(uint32_t));
     proj = (double *) malloc(nr * sizeof(double));
-    if (subs) if (psi >= nr) {
+    if (subs) if (psi == nr) {
         // #pragma omp for simd
         for (i = 0; i < nr; i++)
             subs[i] = 1;
@@ -306,18 +307,18 @@ void gif(double *res, double *dta, int *dimD, int *nt, int *nss) {
 
     H = (double *) malloc(dimD[0] * sizeof(double));
     dat = (double *) malloc(dimD[1] * sizeof(double));
-    if (H && dat) {
+    forest = iForest(dta, dimD, nt, nss);
+    if (H && dat && forest) {
         H[0] = 1.0;
         for (i = 1; i < (uint32_t) *nss; i++) 
             H[i] = H[i - 1] + 1.0 / (1.0 + (double) i);
-        forest = iForest(dta, dimD, nt, nss);
         for (i = 0; i < (uint32_t) dimD[0]; i++) {
             for (j = 0; j < (uint32_t) dimD[1]; j++)
                 dat[j] = dta[dimD[0] * j + i];
             res[i] = anomaly_score(dat, dimD[1], forest, nt, nss);
         }
-        free_forest(forest, nt);
     }
+    free_forest(forest, nt);
     free(H);
     free(dat);
 }
