@@ -21,7 +21,7 @@ double dpoisson(int x, double lambda) {
     if (x >= 0) if (lambda == 0.0) {
         return (double) (x == 0);
     }
-    if (lambda > 0.0) {
+    else if (lambda > 0.0) {
         z = log(lambda) * (double) x;
         z -= lambda; 
         z -= lgamma((double) x + 1.0);
