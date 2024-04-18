@@ -5,6 +5,8 @@
 #include <time.h>
 // #include <omp.h>
 
+/* GIF algorithm with enhanced scores */
+
 /**
  * @brief Isolation tree structure
  * 
