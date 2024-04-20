@@ -5,6 +5,8 @@
         "omp.h": "c",
         "cmath": "c",
         "math.h": "c",
-        "random": "c"
+        "random": "c",
+        "compare": "c",
+        "cstdint": "c"
     }
 }
