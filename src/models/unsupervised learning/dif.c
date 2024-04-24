@@ -417,7 +417,7 @@ void dif(double *res, double *dta, int *dimD, int *nt, int *nss) {
 data(iris)
 dyn.load("test.so")
 dta <- iris[, 1L:4L]
-anom <- .C("dif", res = double(nrow(dta)), as.matrix(scale(dta)), dim(dta), 1000L, 32L)$res
+anom <- .C("dif", res = double(nrow(dta)), as.matrix(scale(log(dta))), dim(dta), 1000L, 32L)$res
 graphics.off()
 hist(anom)
 X11()

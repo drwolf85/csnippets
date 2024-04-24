@@ -17,3 +17,17 @@ double weighted_mean(double *x, double *w, uint32_t n) {
   return res;
 }
 
+double generalized_weighted_mean(double *x, double *w, uint32_t n, double (*fun)(double), double (*invfun)(double)) {
+  uint32_t i;
+  double sm, res = nan("");
+  if (n > 0) {
+    res = sm = 0.0;
+    for (i = 0; i < n; i++) {
+      sm += w[i];
+      res += w[i] * (*fun)(x[i]);
+    }
+    res /= sm;
+  }
+  return (*invfun)(res);
+}
+

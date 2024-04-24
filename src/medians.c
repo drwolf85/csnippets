@@ -194,7 +194,7 @@ double wt_med_std(double *x, double *w, size_t n) {
             a[i].v = x[i];
             a[i].w = w[i];
             a[i].i = i;
-            b = isnan(x[i]);
+            b = !isnan(x[i]);
             sum += w[i] * (double) b;
             nn += (size_t) b;
         }
