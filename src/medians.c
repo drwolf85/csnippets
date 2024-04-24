@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 /**
@@ -122,7 +123,7 @@ typedef struct vector {
 int cmp_vector(void const *aa, void const *bb) {
     vector a = *(vector *) aa;
     vector b = *(vector *) bb;
-    return 2 * (int)(a.v >= b.v) - 1;
+    return 2 * (int)((a.v >= b.v) || (isnan(a.v) && !isnan(b.v))) - 1;
 }
 
 /**
@@ -182,30 +183,27 @@ double wt_med_hst(double *x, double *w, size_t n) {
  */
 double wt_med_std(double *x, double *w, size_t n) {
     vector *a;
-    size_t i;
+    size_t i, nn = 0;
     double res = 0.0 / 0.0;
     double sum = 0.0;
+    bool b;
 
     a = (vector *) malloc(n * sizeof(vector));
-    if (a) {
+    if (a && n > 0) {
         for (i = 0; i < n; i++) {
             a[i].v = x[i];
             a[i].w = w[i];
             a[i].i = i;
-            sum += w[i];
+            b = isnan(x[i]);
+            sum += w[i] * (double) b;
+            nn += (size_t) b;
         }
         sum *= 0.5;
         qsort(a, n, sizeof(vector), cmp_vector);
-        if (a[0].w >= sum) {
-            res = a[0].v;
-        } else {
-            for (i = 1; i < n; i++) {
-                a[i].w += a[i - 1].w;
-                if (a[i].w >= sum) {
-                    res = a[i].v;
-                    break;
-                }
-            }
+        res = a[0].v;
+        for (i = 1; i < nn && a[i - 1].w < sum; i++) {
+            a[i].w += a[i - 1].w;
+            res = a[i].v;
         }
     }
     free(a);
