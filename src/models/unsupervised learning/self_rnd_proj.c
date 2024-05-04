@@ -175,3 +175,27 @@ res <- .C("robust_self_smoothing_matrix", res = as.matrix(dta), dim(dta), w, max
 res <- array(res, dim = dim(dta))
 pairs(res, col = as.integer(as.factor(iris$Species)))
 */
+
+#ifdef DEBUG
+#include "../../.data/iris.h"
+int main() {
+    int j, i = 0, maxit = 1000, knn = 5L;
+    double w[N], dta[N * P] = {0};
+    int dim[2] = {N, P};
+    for (; i < N; i++) w[i] = 1.0;
+    for (i = 0; i < N * P; i++) dta[i] = x_iris[i];
+    robust_self_smoothing_matrix(dta, dim, w, &maxit, &knn);
+    for (i = 0; i < N; i++) { /*
+        for (j = 0; j < P; j++)
+            printf("%1.2f ", dta[i + N * j]);
+        printf("\t");
+        for (j = 0; j < P; j++)
+            printf("%1.2f ", x_iris[i + N * j]);*/
+        for (j = 0; j < P; j++)
+            printf("%s%1.2f ", x_iris[i + N * j] >= dta[i + N * j] ? " " : "", x_iris[i + N * j] - dta[i + N * j]);            
+        printf("\n"); 
+    }
+    return 0;
+}
+#endif
+
