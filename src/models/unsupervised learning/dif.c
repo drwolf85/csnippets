@@ -379,6 +379,7 @@ void iso_model(uint32_t t, double *res, double complex *dta_row_maj, uint32_t nr
             }
         }
     }
+    free(subs);
     free(proj);
     out_vec_free(vecs, nly);    
     free_tree(mytree);
@@ -424,3 +425,17 @@ X11()
 thresh <- quantile(anom, prob = 0.95)
 pairs(dta, col = iris$Species, pch = c(".", "+")[1+(anom > thresh)], cex = 2)
 */
+
+#ifdef DEBUG
+#include "../../.data/iris.h"
+int main() {
+    int i = 0, ntrees = 1000, nss = 32;
+    double res[N] = {0};
+    int dim[2] = {N, P};
+    dif(res, x_iris, dim, &ntrees, &nss);
+    for (; i < N; i++) printf("%g ", res[i]);
+    printf("\n");
+    return 0;
+}
+#endif
+
