@@ -2,7 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <omp.h>
+
+typedef struct dist_vector {
+    double d;
+    int i;
+} dstvec;
+
+int cmp_dstvec(void const *aa, void const *bb) {
+    dstvec a = *(dstvec *)aa;
+    dstvec b = *(dstvec *)bb;
+    return 2 * ((a.d >= b.d) || (isnan(a.d) || !isnan(b.d))) - 1;
+}
 
 /**
  * @brief K-nearest neighbors (using Manhattan distance)
@@ -18,23 +28,27 @@ int * knn1(double *x, double *dta, int N, int D, int K) {
     int i, j, k;
     double dst, tmp;
     int *wh = (int *) malloc(K * sizeof(int));
-    double *dsts= (double *) calloc(K, sizeof(double));
-    for (k = 0; k < N; k++) {
-        wh[k] = -1;
-        dsts[k] = INFINITY;
-    }
-    for (i = 0; i < N; i++) {
-        dst = 0.0;
-        for (j = 0; j < D; j++) {
-            tmp = x[j] - dta[D * i + j];
-            dst += fabs(tmp);
+    dstvec *dsts= (dstvec *) calloc(K, sizeof(dstvec));
+    if (wh && dsts) {
+        for (k = 0; k < K; k++) {
+            dsts[k].i = -1;
+            dsts[k].d = INFINITY;
         }
-        for (k = 1; k < K; k++) {
-            wh[K - k] += (wh[K - k] - wh[K - k - 1]) * (int) (*dsts > dst);
-            dsts[K - k] += (dsts[K - k - 1] - dsts[K - k]) * (double) (*dsts > dst);
+        for (i = 0; i < N; i++) {
+            dst = 0.0;
+            for (j = 0; j < D; j++) {
+                tmp = x[j] - dta[D * i + j];
+                dst += fabs(tmp);
+            }
+            if (dsts[K-1].d > dst) {
+                dsts[K-1].d = dst;
+                dsts[K-1].i = i;
+                qsort(dsts, K, sizeof(dsts), cmp_dstvec);
+            }
         }
-        *wh += (i - *wh) * (int) (*dsts > dst);
-        *dsts += (dst - *dsts) * (double) (*dsts > dst);
+        for (k = 0; k < K; k++) {
+            wh[k] = dsts[k].i;
+        }
     }
     free(dsts);
     return wh;
@@ -54,23 +68,27 @@ int * knn2(double *x, double *dta, int N, int D, int K) {
     int i, j, k;
     double dst, tmp;
     int *wh = (int *) malloc(K * sizeof(int));
-    double *dsts= (double *) calloc(K, sizeof(double));
-    for (k = 0; k < N; k++) {
-        wh[k] = -1;
-        dsts[k] = INFINITY;
-    }
-    for (i = 0; i < N; i++) {
-        dst = 0.0;
-        for (j = 0; j < D; j++) {
-            tmp = x[j] - dta[D * i + j];
-            dst += tmp * tmp;
+    dstvec *dsts= (dstvec *) calloc(K, sizeof(dstvec));
+    if (wh && dsts) {
+        for (k = 0; k < K; k++) {
+            dsts[k].i = -1;
+            dsts[k].d = INFINITY;
         }
-        for (k = 1; k < K; k++) {
-            wh[K - k] += (wh[K - k] - wh[K - k - 1]) * (int) (*dsts > dst);
-            dsts[K - k] += (dsts[K - k - 1] - dsts[K - k]) * (double) (*dsts > dst);
+        for (i = 0; i < N; i++) {
+            dst = 0.0;
+            for (j = 0; j < D; j++) {
+                tmp = x[j] - dta[D * i + j];
+                dst += tmp * tmp;
+            }
+            if (dsts[K-1].d > dst) {
+                dsts[K-1].d = dst;
+                dsts[K-1].i = i;
+                qsort(dsts, K, sizeof(dsts), cmp_dstvec);
+            }
         }
-        *wh += (i - *wh) * (int) (*dsts > dst);
-        *dsts += (dst - *dsts) * (double) (*dsts > dst);
+        for (k = 0; k < K; k++) {
+            wh[k] = dsts[k].i;
+        }
     }
     free(dsts);
     return wh;
@@ -90,23 +108,27 @@ int * knn8(double *x, double *dta, int N, int D, int K) {
     int i, j, k;
     double dst, tmp;
     int *wh = (int *) malloc(K * sizeof(int));
-    double *dsts= (double *) calloc(K, sizeof(double));
-    for (k = 0; k < N; k++) {
-        wh[k] = -1;
-        dsts[k] = INFINITY;
-    }
-    for (i = 0; i < N; i++) {
-        dst = 0.0;
-        for (j = 0; j < D; j++) {
-            tmp = fabs(x[j] - dta[D * i + j]);
-            dst += (tmp - dst) * (double) (tmp > dst);
+    dstvec *dsts= (dstvec *) calloc(K, sizeof(dstvec));
+    if (wh && dsts) {
+        for (k = 0; k < K; k++) {
+            dsts[k].i = -1;
+            dsts[k].d = INFINITY;
         }
-        for (k = 1; k < K; k++) {
-            wh[K - k] += (wh[K - k] - wh[K - k - 1]) * (int) (*dsts > dst);
-            dsts[K - k] += (dsts[K - k - 1] - dsts[K - k]) * (double) (*dsts > dst);
+        for (i = 0; i < N; i++) {
+            dst = 0.0;
+            for (j = 0; j < D; j++) {
+                tmp = fabs(x[j] - dta[D * i + j]);
+                dst += (tmp - dst) * (double) (tmp > dst);
+            }
+            if (dsts[K-1].d > dst) {
+                dsts[K-1].d = dst;
+                dsts[K-1].i = i;
+                qsort(dsts, K, sizeof(dsts), cmp_dstvec);
+            }
         }
-        *wh += (i - *wh) * (int) (*dsts > dst);
-        *dsts += (dst - *dsts) * (double) (*dsts > dst);
+        for (k = 0; k < K; k++) {
+            wh[k] = dsts[k].i;
+        }
     }
     free(dsts);
     return wh;
@@ -126,20 +148,23 @@ int * knn_gdf(double *x, double *dta, int N, int D, int K, double (*df_ptr)(doub
     int i, j, k;
     double dst, tmp;
     int *wh = (int *) malloc(K * sizeof(int));
-    double *dsts= (double *) calloc(K, sizeof(double));
-    for (k = 0; k < N; k++) {
-        wh[k] = -1;
-        dsts[k] = INFINITY;
-    }
-    for (i = 0; i < N; i++) {
-        dst = df_ptr(x, &dta[D * i], D);
-        j = (int) (*dsts > dst);
-        for (k = 1; k < K; k++) {
-            wh[K - k] += (wh[K - k] - wh[K - k - 1]) * j;
-            dsts[K - k] += (dsts[K - k - 1] - dsts[K - k]) * (double) j;
+    dstvec *dsts= (dstvec *) calloc(K, sizeof(dstvec));
+    if (wh && dsts) {
+        for (k = 0; k < K; k++) {
+            dsts[k].i = -1;
+            dsts[k].d = INFINITY;
         }
-        *wh += (i - *wh) * j;
-        *dsts += (dst - *dsts) * (double) j;
+        for (i = 0; i < N; i++) {
+            dst = df_ptr(x, &dta[D * i], D);
+            if (dsts[K-1].d > dst) {
+                dsts[K-1].d = dst;
+                dsts[K-1].i = i;
+                qsort(dsts, K, sizeof(dsts), cmp_dstvec);
+            }
+        }
+        for (k = 0; k < K; k++) {
+            wh[k] = dsts[k].i;
+        }
     }
     free(dsts);
     return wh;
