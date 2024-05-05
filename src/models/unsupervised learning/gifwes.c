@@ -129,9 +129,11 @@ iTrees * iTree(double *X, uint32_t psi, uint32_t nr, uint32_t nv, uint32_t rl, u
     uint32_t i, j;
     double mn, mx, p = nan(""), sm = 0.0;
     uint32_t szl = 0, szr = 0;
-    iTrees * my_tree = NULL;
-    double *w = (double *) malloc(nv * sizeof(double));
+    iTrees *my_tree = NULL;
+    double *w = NULL;
     my_tree = (iTrees *) calloc(1, sizeof(iTrees));
+    my_tree->lincon = (double *) calloc(nv, sizeof(double));
+    w = my_tree->lincon;
     if (my_tree && w) {
         if (e >= l || psi <= 1) {
             my_tree->size = psi;
@@ -150,7 +152,6 @@ iTrees * iTree(double *X, uint32_t psi, uint32_t nr, uint32_t nv, uint32_t rl, u
             for (i = 0; i < nv; i++) {
                 w[i] *= sm;
             }
-            my_tree->lincon = w;
             /* Compute the projection vector */
             if (subs && proj) {
                 mn = (double) INFINITY;

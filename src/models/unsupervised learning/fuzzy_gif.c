@@ -186,9 +186,11 @@ iTrees * iTree(double *X, uint32_t pstrt, uint32_t psi, uint32_t nr, uint32_t nv
     uint32_t i, j;
     double p = nan(""), sm = 0.0;
     uint32_t szl = 0, szr = 0;
-    iTrees * my_tree = NULL;
-    double *w = (double *) malloc(nv * sizeof(double));
+    iTrees *my_tree = NULL;
+    double *w = NULL;
     my_tree = (iTrees *) calloc(1, sizeof(iTrees));
+    my_tree->lincon = (double *) calloc(nv, sizeof(double));
+    w = my_tree->lincon;
     if (my_tree && w) {
         if (e >= l || psi <= 1) {
             my_tree->size = psi;
@@ -207,7 +209,6 @@ iTrees * iTree(double *X, uint32_t pstrt, uint32_t psi, uint32_t nr, uint32_t nv
             for (i = 0; i < nv; i++) {
                 w[i] *= sm;
             }
-            my_tree->lincon = w;
             /* Compute the projection vector */
             if (proj) {
                 for (i = pstrt; i < pstrt + psi; i++) {
@@ -230,7 +231,6 @@ iTrees * iTree(double *X, uint32_t pstrt, uint32_t psi, uint32_t nr, uint32_t nv
     }
     return my_tree;
 }
-
 
 /**
  * @brief Create a Generalized Isolation Forest (GIF)
@@ -381,3 +381,16 @@ X11()
 pairs(dta, col = iris$Species, pch = c(".", "+")[1+(anom > 0.5)], cex = 2)
 mean(anom > 0.5)
 */
+
+#ifdef DEBUG
+#include "../../.data/iris.h"
+int main() {
+    int i = 0, ntrees = 1000, nss = 32;
+    double res[N] = {0};
+    int dim[2] = {N, P};
+    gif(res, x_iris, dim, &ntrees, &nss);
+    for (; i < N; i++) printf("%g ", res[i]);
+    printf("\n");
+    return 0;
+}
+#endif

@@ -330,9 +330,11 @@ iTrees * iTree(double complex *X, uint32_t pstrt, uint32_t psi, uint32_t nv, uin
     uint32_t i, j;
     double p = nan(""), sm = 0.0;
     uint32_t szl = 0, szr = 0;
-    iTrees * my_tree = NULL;
-    double *w = (double *) malloc((nv << 1) * sizeof(double));
+    iTrees *my_tree = NULL;
+    double *w = NULL;
     my_tree = (iTrees *) calloc(1, sizeof(iTrees));
+    my_tree->lincon = (double *) calloc((nv << 1), sizeof(double));
+    w = my_tree->lincon;
     if (my_tree && w) {
         if (e >= l || psi <= 1) {
             my_tree->size = psi;
@@ -351,7 +353,6 @@ iTrees * iTree(double complex *X, uint32_t pstrt, uint32_t psi, uint32_t nv, uin
             for (i = 0; i < (nv << 1); i++) {
                 w[i] *= sm;
             }
-            my_tree->lincon = w;
             /* Compute the projection vector */
             if (proj) {
                 for (i = pstrt; i < pstrt + psi; i++) {
@@ -542,20 +543,19 @@ void rlssm(double *X, int *dimX, double *w) {
     uint32_t n = (uint32_t) *dimX;
     uint32_t p = (uint32_t) dimX[1];
     double *finX = (double *) malloc(n * p * sizeof(double)); 
-    double *pdta = (double *) malloc(n * (p - 1) * sizeof(double)); 
+    double *pdta = (double *) malloc(n * p * sizeof(double));
     if (pdta && finX && p > 1 && n >= p) {
-        dimX[1]--;
-        for (j = 1; j < p; j++) 
+        for (i = 0; i < n; i++) pdta[i] = 1.0;
+        for (j = 1; j < p; j++)
             for (i = 0; i < n; i++) 
-                pdta[(j - 1) * n + i] = X[j * n + i];
+                pdta[j * n + i] = X[j * n + i];
         wilar_resid(finX, X, w, pdta, dimX);
         for (s = 1; s < p; s++) {
             for (j = 0; j < s; j++) 
                 for (i = 0; i < n; i++) 
-                    pdta[j * n + i] = X[j * n + i];
+                    pdta[(j + 1) * n + i] = X[j * n + i]; /** FIMXE: */
             wilar_resid(&finX[s * n], &X[s * n], w, pdta, dimX);
         }
-        dimX[1]++;
         for (i = 0; i < n * p; i++) X[i] -= finX[i];
     }
     free(pdta);
@@ -640,6 +640,7 @@ int main() {
     for (i = 0; i < N * P; i++) dta[i] = log(x_iris[i]);
     autoscale(dta, dim, true, true);
     dif(w, dta, dim, &ntrees, &nss);
+    for (i = 0; i < N; i++) w[i] = 1.0 / w[i];
     for (i = 0; i < N * P; i++) dta[i] = log(x_iris[i]);
     rlssm(dta, dim, w);
     for (i = 0; i < N * P; i++) dta[i] = exp(dta[i]);
