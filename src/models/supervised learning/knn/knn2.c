@@ -43,7 +43,7 @@ int * knn1(double *x, double *dta, int N, int D, int K) {
             if (dsts[K-1].d > dst) {
                 dsts[K-1].d = dst;
                 dsts[K-1].i = i;
-                qsort(dsts, K, sizeof(dsts), cmp_dstvec);
+                qsort(dsts, K, sizeof(dstvec), cmp_dstvec);
             }
         }
         for (k = 0; k < K; k++) {
@@ -83,7 +83,7 @@ int * knn2(double *x, double *dta, int N, int D, int K) {
             if (dsts[K-1].d > dst) {
                 dsts[K-1].d = dst;
                 dsts[K-1].i = i;
-                qsort(dsts, K, sizeof(dsts), cmp_dstvec);
+                qsort(dsts, K, sizeof(dstvec), cmp_dstvec);
             }
         }
         for (k = 0; k < K; k++) {
@@ -123,7 +123,7 @@ int * knn8(double *x, double *dta, int N, int D, int K) {
             if (dsts[K-1].d > dst) {
                 dsts[K-1].d = dst;
                 dsts[K-1].i = i;
-                qsort(dsts, K, sizeof(dsts), cmp_dstvec);
+                qsort(dsts, K, sizeof(dstvec), cmp_dstvec);
             }
         }
         for (k = 0; k < K; k++) {
@@ -159,7 +159,7 @@ int * knn_gdf(double *x, double *dta, int N, int D, int K, double (*df_ptr)(doub
             if (dsts[K-1].d > dst) {
                 dsts[K-1].d = dst;
                 dsts[K-1].i = i;
-                qsort(dsts, K, sizeof(dsts), cmp_dstvec);
+                qsort(dsts, K, sizeof(dstvec), cmp_dstvec);
             }
         }
         for (k = 0; k < K; k++) {
