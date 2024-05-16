@@ -204,7 +204,7 @@ static inline double R5(double z) {
     return num / den;
 }
 
-double qnorm_whichura(double p, double m, double s) {
+double qnorm_whichura(double p, double m, double s) { /** Best approximation in this file */
     int wht = (p > EM25) + (p >= 0.075) + (p > 0.925) + (p >= NEM1M25);
     double z;
     switch (wht)
@@ -233,6 +233,159 @@ double qnorm_whichura(double p, double m, double s) {
     return s * z + m;
 }
 
+/** NOTE: The following functions are used for low-accuracy approximation of the qnorm function */
+double qnorm_odeh_n_evans(double p, double m, double s) { /* Most accurate among the low-accuracy approximations */
+    double z, sgn = (1.0 - 2.0 * (double) (p > 0.5));
+    double y, r = (double) (p > 0.5) + p * sgn;
+    if (r < 1e-20) {
+        z = 20.0;
+    }
+    else {
+        y = sqrt(-2.0 * log(r));
+        z = y - ((((4.53642210148e-5 * y + 0.0204231210245) * y + 0.342242088547) * y + 1.0) * y + 0.322232431088) / ((((0.0038560700634 * y + 0.10353775285) * y + 0.531103462366) * y + 0.588581570495) * y + 0.099348462606);
+    }
+    return sgn * z * s + m;
+}
+
+double qnorm_beasley_n_springer_complete(double p, double m, double s) {
+    double z, sgn = (1.0 - 2.0 * (double) (p > 0.5));
+    double y, r = (double) (p > 0.5) + p * sgn;
+    double q;
+    if (r < 1e-20) {
+        z = 20.0;
+    }
+    else {
+        q = p - 0.5;
+        if (fabs(q) <= 0.42) {
+            r = q * q;
+            z = q * (((25.44106 * r - 41.3912) * r + 18.615) * r - 2.506628) / ((((3.130829 * r - 21.06224) * r + 23.08337) * r - 8.473511) * r  + 1.0);
+            sgn = 1.0;
+        }
+        else {
+            r = sqrt(-log(r));
+            z = (((2.321213 * r + 4.850141) * r - 2.297965) * r - 2.787189) / ((1.637068 * r + 3.543889) * r + 1.0);
+        }
+    }
+    return sgn * z * s + m;
+}
+
+double qnorm_hastings_67(double p, double m, double s) {
+    double z, sgn = (1.0 - 2.0 * (double) (p > 0.5));
+    double y, r = (double) (p > 0.5) + p * sgn;
+    if (r < 1e-20) {
+        z = 20.0;
+    }
+    else {
+        y = sqrt(-2.0 * log(r));
+        z = y - (0.27061 * y + 2.30753) / ((0.04481 * y + 0.99229) * y + 1.0);
+    }
+    return sgn * z * s + m;
+}
+
+double qnorm_hastings_68(double p, double m, double s) {
+    double z, sgn = (1.0 - 2.0 * (double) (p > 0.5));
+    double y, r = (double) (p > 0.5) + p * sgn;
+    if (r < 1e-20) {
+        z = 20.0;
+    }
+    else {
+        y = sqrt(-2.0 * log(r));
+        z = y - ((0.010328 * y + 0.802853) * y + 2.515517) / (((0.001308 * y + 0.189269) * y + 1.432788) * y + 1.0);
+    }
+    return sgn * z * s + m;
+}
+
+double qnorm_hill_n_davis(double p, double m, double s) {
+    double z, sgn = (1.0 - 2.0 * (double) (p > 0.5));
+    double y, r = (double) (p > 0.5) + p * sgn;
+    if (r < 1e-20) {
+        z = 20.0;
+    }
+    else {
+        y = sqrt(-2.0 * log(r));
+        z = y - ((7.45551 * y + 450.636) * y + 1271.059) / (((y + 110.4212) * y + 750.365) * y + 500.756);
+    }
+    return sgn * z * s + m;
+}
+
+double qnorm_beasley_n_springer_tail(double p, double m, double s) {
+    double z, sgn = (1.0 - 2.0 * (double) (p > 0.5));
+    double r = (double) (p > 0.5) + p * sgn;
+    if (r < 1e-20) {
+        z = 20.0;
+    }
+    else {
+        r = sqrt(-log(r));
+        z = (((2.321213 * r + 4.850141) * r - 2.297965) * r - 2.787189) / ((1.637068 * r + 3.543889) * r + 1.0);
+    }
+    return sgn * z * s + m;
+}
+
+double qnorm_bailey_complete(double p, double m, double s) {
+    double z, sgn = (1.0 - 2.0 * (double) (p > 0.5));
+    double y, u, r = (double) (p > 0.5) + p * sgn;
+    double const w = 1.570796;
+    if (r < 1e-20) {
+        z = 20.0;
+    }
+    else {
+        if (r < 2.2e-6) {
+            u = -2.0 * log(r);
+            y = sqrt(u - log(4 * w * u));
+            z = y + (0.5962 + 0.1633 * y) / (y * y * y);
+        }
+        else {
+            y = -w * log(4.0 * p * (1.0 - p));
+            if (y < 0) {
+                z = 0.0;
+            }
+            else {
+                z = (((4.3728e-6 * y - 2.881e-4) * y + 0.0078365) * y + 1.0) * sqrt(y);
+            }
+        }
+    }
+    return sgn * z * s + m;
+}
+
+double qnorm_bailey_central(double p, double m, double s) {
+    double z, sgn = (1.0 - 2.0 * (double) (p > 0.5));
+    double y, r = (double) (p > 0.5) + p * sgn;
+    double const w = 1.570796;
+    if (r < 1e-20) {
+        z = 20.0;
+    }
+    else {
+        y = -w * log(4.0 * p * (1.0 - p));
+        if (y < 0) {
+            z = 0.0;
+        }
+        else {
+            z = (((4.3728e-6 * y - 2.881e-4) * y + 0.0078365) * y + 1.0) * sqrt(y);
+        }
+    }
+    return sgn * z * s + m;
+}
+
+double qnorm_koehler(double p, double m, double s) {
+    double z, sgn = (1.0 - 2.0 * (double) (p > 0.5));
+    double y, r = (double) (p > 0.5) + p * sgn;
+    if (r < 1e-20) {
+        z = 20.0;
+    }
+    else {
+        y = -log(4.0 * p * (1.0 - p));
+        if (y < 0) {
+            z = 0.0;
+        }
+        else {
+            y = sqrt(y);
+            z = y / (0.81 - 0.0193 * y);
+        }
+    }
+    return sgn * z * s + m;
+}
+
+
 /* Test function */
 int main() {
     double x = -1.64;
@@ -250,10 +403,29 @@ int main() {
         printf("%f\t", tmp);
         if (i % 5 == 0) printf("\n");
     }
-    printf("Approximations:\n");
+    printf("High-accuracy approximations:\n");
     q = qnorm_ackalm(0.95, 0.0, 1.0);
     printf("Ackalm: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
     q = qnorm_whichura(0.95, 0.0, 1.0);
     printf("Whichura: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
+    printf("Low-accuracy approximations:\n");
+    q = qnorm_hastings_67(0.95, 0.0, 1.0);
+    printf("Hastings (67) approximation: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
+    q = qnorm_hastings_68(0.95, 0.0, 1.0);
+    printf("Hastings (68) approximation: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
+    q = qnorm_hill_n_davis(0.95, 0.0, 1.0);
+    printf("Hill and Davis approximation: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
+    q = qnorm_odeh_n_evans(0.95, 0.0, 1.0);
+    printf("Odeh and Evans approximation: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
+    q = qnorm_beasley_n_springer_complete(0.95, 0.0, 1.0);
+    printf("Beasley and Springer (complete) approximation: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
+    q = qnorm_beasley_n_springer_tail(0.95, 0.0, 1.0);
+    printf("Beasley and Springer (tail) approximation: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
+    q = qnorm_bailey_complete(0.95, 0.0, 1.0);
+    printf("Bailey (complete) approximation: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
+    q = qnorm_bailey_central(0.95, 0.0, 1.0);
+    printf("Bailey (central) approximation: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
+    q = qnorm_koehler(0.95, 0.0, 1.0);
+    printf("Koehler approximation: x = %f, d = %f, p = %f, q = %f\n", x, d, p, q);
     return 0;
 }
