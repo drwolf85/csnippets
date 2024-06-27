@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "cblas64.h": "c",
+        "lapacke.h": "c"
+    }
+}
