@@ -5,6 +5,8 @@
         "random": "c",
         "omp.h": "c",
         "vector": "c",
-        "algorithm": "c"
+        "algorithm": "c",
+        "string.h": "c",
+        "stdio.h": "c"
     }
 }
