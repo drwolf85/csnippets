@@ -6,7 +6,7 @@
 #define N_SPLITS 100
 
 /**
- * The function calculates the Jeffreys distance between two probability distributions
+ * The function calculates the Hellinger distance between two probability distributions
  * represented by functions.
  * 
  * @param x The parameter `x` is a pointer to a function that takes a double as input and returns a
@@ -17,31 +17,29 @@
  * double value. This function represents a probability density function (PDF) that we want to compare
  * with another PDF represented by the function `x`. The same support of the two PDFs is required.
  * 
- * @return The function `jeffreys_distance` is returning the Jeffreys distance between two
+ * @return The function `hellinger_distance` is returning the Hellinger distance between two
  * probability density functions represented by the input function pointers `x` and `y`.
  */
-double jeffreys_distance(double (*x)(double), double (*y)(double)) {
+double hellinger_distance(double (*x)(double), double (*y)(double)) {
     double res = 0.0;
-    double z, f, g, cm, tmp, s;
+    double z, f, g, cm, tmp;
     double const inv = 1.0 / (double) N_SPLITS;
     size_t i = 0;
 
-    #pragma omp parallel for simd private(z, f, g, cm, tmp, s) reduction(+ : res)
+    #pragma omp parallel for simd private(z, f, g, cm, tmp) reduction(+ : res)
     for (i = 0; i < N_SPLITS; i++) {
         cm = 0.0;
         z = (double) i * inv;
         /* z = tan(M_PI * (z - 0.5)); */
-        f = sqrt((*x)(z));
-        g = sqrt((*y)(z));
-        s = f - g;
-        tmp = s * s;
+        f = (*x)(z);
+        g = (*y)(z);
+        tmp = sqrt(f * g);
         if (isfinite(tmp)) cm += tmp;
         z = (double) (i + 1) * inv;
         /* z = tan(M_PI * (z - 0.5)); */
-        f = sqrt((*x)(z));
-        g = sqrt((*y)(z));
-        s = f - g;
-        tmp = s * s;
+        f = (*x)(z);
+        g = (*y)(z);
+        tmp = sqrt(f * g);
         if (isfinite(tmp)) cm += tmp;
         /* Linear approximation */ /*
         res += 0.5 * cm * inv;
@@ -49,14 +47,13 @@ double jeffreys_distance(double (*x)(double), double (*y)(double)) {
         /* Simpson's rule */
         z = ((double) i + 0.5) * inv;
         /* z = tan(M_PI * (z - 0.5)); */
-        f = sqrt((*x)(z));
-        g = sqrt((*y)(z));
-        s = f - g;
-        tmp = s * s;
+        f = (*x)(z);
+        g = (*y)(z);
+        tmp = sqrt(f * g);
         if (isfinite(tmp)) cm += 4.0 * tmp;
         res += cm * inv / 6.0;
     }
-    return res;
+    return sqrt(fabs(1.0 - res));
 }
 
 /* Test functions */
@@ -75,14 +72,9 @@ double dquad(double x) {
 }
 
 int main () {
-    printf("Jeffreys-dist unif-vs-unif = %f\n", jeffreys_distance(dunif, dunif));
-    printf("Jeffreys-dist quad-vs-quad = %f\n", jeffreys_distance(dquad, dquad));
-    printf("Jeffreys-dist unif-vs-quad = %f\n", jeffreys_distance(dunif, dquad));
-    printf("Jeffreys-dist quad-vs-unif = %f\n", jeffreys_distance(dquad, dunif));
-    printf("================================================================\n");
-    printf("Hellinger-dist unif-vs-unif = %f\n", M_SQRT1_2 * sqrt(jeffreys_distance(dunif, dunif)));
-    printf("Hellinger-dist quad-vs-quad = %f\n", M_SQRT1_2 * sqrt(jeffreys_distance(dquad, dquad)));
-    printf("Hellinger-dist unif-vs-quad = %f\n", M_SQRT1_2 * sqrt(jeffreys_distance(dunif, dquad)));
-    printf("Hellinger-dist quad-vs-unif = %f\n", M_SQRT1_2 * sqrt(jeffreys_distance(dquad, dunif)));
+    printf("Hellinger-dist unif-vs-unif = %f\n", hellinger_distance(dunif, dunif));
+    printf("Hellinger-dist quad-vs-quad = %f\n", hellinger_distance(dquad, dquad));
+    printf("Hellinger-dist unif-vs-quad = %f\n", hellinger_distance(dunif, dquad));
+    printf("Hellinger-dist quad-vs-unif = %f\n", hellinger_distance(dquad, dunif));
     return 0;
 }
