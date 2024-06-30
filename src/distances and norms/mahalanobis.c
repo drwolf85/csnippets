@@ -185,8 +185,11 @@ double mahalanobis_distance(double *x, double *y, size_t n, double *sigma) {
 int main() {
     double x[] = {-5.2, 1.2};
     double y[] = {1.2, 1.2};
+    double z[2] = {0};
     double S[] = {1.23, -0.5, -0.5, 3.21};
-    size_t i;
-    printf("Mahalanobis distance between x and y is %f\n", mahalanobis_distance(x, y, 2, S));
+    double res = mahalanobis_distance(x, y, 2, S);
+    printf("Mahalanobis distance between x and y is %f\n", res);
+    res /= 0.5 * (res + mahalanobis_distance(z, y, 2, S) + mahalanobis_distance(x, z, 2, S));
+    printf("Steinhaus transform of the Mahalanobis distance between x and y is %f\n", res);   
     return 0;
 }

@@ -48,10 +48,31 @@ double minkovsky_distance(double *x, double *y, size_t n, double p) {
 int main() {
     double x[] = {-5.2, 1.2, 4.6, 7.8, 9.8};
     double y[] = {1.2, 1.2, -3.4, 2.8, 9.6};
-    size_t i;
-    printf("L-1 distance between x and y is %f\n", minkovsky_distance(x, y, 5, 1.0));
-    printf("L-2 distance between x and y is %f\n", minkovsky_distance(x, y, 5, 2.0));
-    printf("L-3 distance between x and y is %f\n", minkovsky_distance(x, y, 5, 3.0));
-    printf("L-inf distance between x and y is %f\n", minkovsky_distance(x, y, 5, INFINITY));
+    double z[] = {0};
+    double p, res;
+
+    p = 1.0;
+    res = minkovsky_distance(x, y, 5, p);
+    printf("L-1 distance between x and y is %f\n", res);
+    res /= 0.5 * (res + minkovsky_distance(x, z, 5, p) + minkovsky_distance(z, y, 5, p));
+    printf("Steinhaus transform of L-1 distance between x and y is %f\n\n", res);
+
+    p = 2.0;
+    res = minkovsky_distance(x, y, 5, p);
+    printf("L-2 distance between x and y is %f\n", res);
+    res /= 0.5 * (res + minkovsky_distance(x, z, 5, p) + minkovsky_distance(z, y, 5, p));
+    printf("Steinhaus transform of L-2 distance between x and y is %f\n\n", res);
+
+    p = 3.0;
+    res = minkovsky_distance(x, y, 5, p);
+    printf("L-3 distance between x and y is %f\n", res);
+    res /= 0.5 * (res + minkovsky_distance(x, z, 5, p) + minkovsky_distance(z, y, 5, p));
+    printf("Steinhaus transform of L-3 distance between x and y is %f\n\n", res);
+
+    p = INFINITY;
+    res = minkovsky_distance(x, y, 5, p);
+    printf("L-inf distance between x and y is %f\n", res);
+    res /= 0.5 * (res + minkovsky_distance(x, z, 5, p) + minkovsky_distance(z, y, 5, p));
+    printf("Steinhaus transform of L-inf distance between x and y is %f\n", res);
     return 0;
 }

@@ -34,7 +34,11 @@ uint64_t hamming_distance(char *x, char *y, size_t n) {
 int main() {
     char x[] = "This is a test!";
     char y[] = "This is a nest.";
+    char z[] = "That is a rest.";
     uint64_t hd = hamming_distance(x, y, 15);
+    double res = (double) hd;
     printf("Computed Hamming distance is %lu\n", hd);
+    res /= 0.5 * (res + (double) hamming_distance(x, z, 15) + (double) hamming_distance(z, y, 15));
+    printf("Computed Steinhaus transform of the Hamming distance is %f\n", res);
     return 0;
 }
