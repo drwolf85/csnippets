@@ -2,6 +2,16 @@
 #include <math.h>
 #include <omp.h>
 
+#ifdef DEBUG
+#include <stdio.h>
+#include <time.h>
+struct data_vec {
+    double *x;
+    int n;
+    char shog;
+};
+#endif
+
 /**
  * It computes the outer product of a triangular matrix with itself
  * 
@@ -105,17 +115,18 @@ void solveHessMat(double *mat, int *nn) {
 }
 
 /**
- * It computes the Noor-Waseem (2019) optimization steps, to minimize a nonlinear error function.
+ * It computes the Noor-Waseem (2009) optimization steps, to minimize a nonlinear error function.
  * The same algorithm can be used to solve a system of nonlinear equations. 
  * 
  * @param param the parameters to be optimized
  * @param len the length of the parameter vector
  * @param n_iter number of iterations
  * @param info a pointer to a structure that contains the data and other information
+ * @param lambda a pointer to a positive value to stabilize the inversion of the hessian 
  * @param grad a routine that computes the gradient of the objective function
  * @param hess a routine that computes the Hessian of the objective function
  */
-void noorwaseem(double *param, int *len, int *n_iter, void *info,
+void noorwaseem(double *param, int *len, int *n_iter, void *info, double *lambda,
                  void (*grad)(double *, double *, int *, void *),
                  void (*hess)(double *, double *, int *, void *)) {
     int t, i, j, np = *len;
@@ -124,6 +135,11 @@ void noorwaseem(double *param, int *len, int *n_iter, void *info,
     double *par_v;
     double *hss_m;
     double *hs2_m;
+
+#ifdef DEBUG
+    struct data_vec dta = *(struct data_vec *) info;
+    dta.shog = 1;
+#endif
 
     grd_v = (double *) malloc(np * sizeof(double));
     par_v = (double *) malloc(np * sizeof(double));
@@ -137,6 +153,9 @@ void noorwaseem(double *param, int *len, int *n_iter, void *info,
                     1. Symmetrical! and 
                     2. Positive definite!) */
             (*hess)(hss_m, param, len, info);
+            /* Marquardt adjustment */
+            for (i = 0; i < np; i++)
+                hss_m[(np + 1) * i] *= 1.0 + *lambda;
             /* Invert the Hessian matrix */
             solveHessMat(hss_m, len);
             /* Compute Gauss-Newton descending step */
@@ -167,6 +186,8 @@ void noorwaseem(double *param, int *len, int *n_iter, void *info,
                     hss_m[np * i + j] += 4.0 * hs2_m[np * i + j];
                     hss_m[np * i + j] *= (1.0 / 6.0);
                 }
+                /* Marquardt adjustment */
+                hss_m[(np + 1) * i] *= 1.0 + *lambda;
             }
             /* Invert new Hessian matrix */
             solveHessMat(hss_m, len);
@@ -180,6 +201,9 @@ void noorwaseem(double *param, int *len, int *n_iter, void *info,
                 param[i] -= tmp;
             }
         }
+#ifdef DEBUG
+        (*grad)(grd_v, param, len, (void *) &dta);
+#endif
     }
     free(par_v);
     free(grd_v);
@@ -189,23 +213,11 @@ void noorwaseem(double *param, int *len, int *n_iter, void *info,
 
 
 #if DEBUG
-
-#include <time.h>
-#define N_UNKNOWN 2
-#define MAX_ITER 100
-#define N_DATA 12 /* This needs to be divisible by the number below */
-#define N_BY_LINE 4
-
-struct data_vec {
-    double *x;
-    int n;
-};
-
 void my_grad(double *grd, double *par, int *len, void *info) {
     int i;
     double sx = 0.0, sx2 = 0.0, iv = 1.0 / par[1];
     struct data_vec dta = *(struct data_vec *) info;
-    if (*len = 2) {
+    if (*len == 2) {
         #pragma omp parallel for simd reduction(+ : sx, sx2)
         for (i = 0; i < dta.n; i++) {
             sx += dta.x[i];
@@ -213,15 +225,14 @@ void my_grad(double *grd, double *par, int *len, void *info) {
         }
         grd[0] = par[0] * (double) dta.n - sx;
         grd[1] = (0.5 * (sx2 - 2.0 * par[0] * sx + par[0] * par[0]) * iv - 1.0) * iv;
-        printf("Grad[0] = %g ; Grad[1] = %g \n", grd[0], grd[1]);
+        if (dta.shog) printf("Grad[0] = %g ; Grad[1] = %g \n", grd[0], grd[1]);
     }
 }
 
 void my_hess(double *hss, double *par, int *len, void *info) {
     int i, j;
     double *jcb = (double *) malloc(*len * sizeof(double));
-    struct data_vec dta = *(struct data_vec *) info;
-    if (*len = 2 && jcb) {
+    if (*len == 2 && jcb) {
         my_grad(jcb, par, len, info);
         for (i = 0; i < *len; i++) {
             for (j = 0; j < *len; j++) {
@@ -231,11 +242,17 @@ void my_hess(double *hss, double *par, int *len, void *info) {
     }
     free(jcb);
 }
-             
+
+#define N_UNKNOWN 2
+#define MAX_ITER 10
+#define N_DATA 12 /* This needs to be divisible by the number below */
+#define N_BY_LINE 4
+
 int main() {
     double init[N_UNKNOWN] = {0.5 , 1.0 / 12.0};
     int i, len = N_UNKNOWN;
     int maxit = MAX_ITER;
+    double lambda = 1e-6;
     struct data_vec v;
     v.x = calloc(N_DATA, sizeof(double));
     v.n = N_DATA;
@@ -249,9 +266,8 @@ int main() {
         for (i = 0; i < N_DATA; i++) {
             v.x[i] = (double) rand() / (double) RAND_MAX;
             printf("%f%s", v.x[i], i % N_BY_LINE == (N_BY_LINE - 1) ? "\n" : " ");
-        }   
-        // bfgs(init, &len, &maxit, (void *) &v, my_grad);
-        noorwaseem(init, &len, &maxit, (void *) &v, my_grad, my_hess);
+        }
+        noorwaseem(init, &len, &maxit, (void *) &v, &lambda, my_grad, my_hess);
         printf("Optimized parameters:\n");
         printf("mu = %g and sigma^2 = %g\n", init[0], init[1]);
     }
