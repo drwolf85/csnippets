@@ -187,3 +187,75 @@ void noorwaseem(double *param, int *len, int *n_iter, void *info,
     free(hs2_m);
 }
 
+
+#if DEBUG
+
+#include <time.h>
+#define N_UNKNOWN 2
+#define MAX_ITER 100
+#define N_DATA 12 /* This needs to be divisible by the number below */
+#define N_BY_LINE 4
+
+struct data_vec {
+    double *x;
+    int n;
+};
+
+void my_grad(double *grd, double *par, int *len, void *info) {
+    int i;
+    double sx = 0.0, sx2 = 0.0, iv = 1.0 / par[1];
+    struct data_vec dta = *(struct data_vec *) info;
+    if (*len = 2) {
+        #pragma omp parallel for simd reduction(+ : sx, sx2)
+        for (i = 0; i < dta.n; i++) {
+            sx += dta.x[i];
+            sx2 += dta.x[i] * dta.x[i];
+        }
+        grd[0] = par[0] * (double) dta.n - sx;
+        grd[1] = (0.5 * (sx2 - 2.0 * par[0] * sx + par[0] * par[0]) * iv - 1.0) * iv;
+        printf("Grad[0] = %g ; Grad[1] = %g \n", grd[0], grd[1]);
+    }
+}
+
+void my_hess(double *hss, double *par, int *len, void *info) {
+    int i, j;
+    double *jcb = (double *) malloc(*len * sizeof(double));
+    struct data_vec dta = *(struct data_vec *) info;
+    if (*len = 2 && jcb) {
+        my_grad(jcb, par, len, info);
+        for (i = 0; i < *len; i++) {
+            for (j = 0; j < *len; j++) {
+                hss[*len * i + j] = jcb[i] * jcb[j];
+            }
+        }
+    }
+    free(jcb);
+}
+             
+int main() {
+    double init[N_UNKNOWN] = {0.5 , 1.0 / 12.0};
+    int i, len = N_UNKNOWN;
+    int maxit = MAX_ITER;
+    struct data_vec v;
+    v.x = calloc(N_DATA, sizeof(double));
+    v.n = N_DATA;
+    
+    printf("Initial values:\n");
+    printf("mu = %g and sigma^2 = %g\n", init[0], init[1]);
+    if (v.x) {
+        /* Init data vector */
+        printf("Data values:\n");
+        srand(time(NULL));
+        for (i = 0; i < N_DATA; i++) {
+            v.x[i] = (double) rand() / (double) RAND_MAX;
+            printf("%f%s", v.x[i], i % N_BY_LINE == (N_BY_LINE - 1) ? "\n" : " ");
+        }   
+        // bfgs(init, &len, &maxit, (void *) &v, my_grad);
+        noorwaseem(init, &len, &maxit, (void *) &v, my_grad, my_hess);
+        printf("Optimized parameters:\n");
+        printf("mu = %g and sigma^2 = %g\n", init[0], init[1]);
+    }
+    free(v.x);
+    return 0;
+}
+#endif
