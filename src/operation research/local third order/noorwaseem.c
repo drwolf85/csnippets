@@ -2,6 +2,8 @@
 #include <math.h>
 #include <omp.h>
 
+#define DIAG_TOLL 1e-9
+
 #ifdef DEBUG
 #include <stdio.h>
 #include <time.h>
@@ -153,9 +155,12 @@ void noorwaseem(double *param, int *len, int *n_iter, void *info, double *lambda
                     1. Symmetrical! and 
                     2. Positive definite!) */
             (*hess)(hss_m, param, len, info);
-            /* Marquardt adjustment */
-            for (i = 0; i < np; i++)
+            for (i = 0; i < np; i++) {
+                /* Marquardt's adjustment */
                 hss_m[(np + 1) * i] *= 1.0 + *lambda;
+                /* Levenberg's adjustment */
+                hss_m[(np + 1) * i] += (double) (fabs(hss_m[(np + 1) * i]) < DIAG_TOLL) * DIAG_TOLL;
+            }
             /* Invert the Hessian matrix */
             solveHessMat(hss_m, len);
             /* Compute Gauss-Newton descending step */
@@ -186,8 +191,10 @@ void noorwaseem(double *param, int *len, int *n_iter, void *info, double *lambda
                     hss_m[np * i + j] += 4.0 * hs2_m[np * i + j];
                     hss_m[np * i + j] *= (1.0 / 6.0);
                 }
-                /* Marquardt adjustment */
+                /* Marquardt's adjustment */
                 hss_m[(np + 1) * i] *= 1.0 + *lambda;
+                /* Levenberg's adjustment */
+                hss_m[(np + 1) * i] += (double) (fabs(hss_m[(np + 1) * i]) < DIAG_TOLL) * DIAG_TOLL;
             }
             /* Invert new Hessian matrix */
             solveHessMat(hss_m, len);
@@ -244,7 +251,7 @@ void my_hess(double *hss, double *par, int *len, void *info) {
 }
 
 #define N_UNKNOWN 2
-#define MAX_ITER 10
+#define MAX_ITER 100
 #define N_DATA 12 /* This needs to be divisible by the number below */
 #define N_BY_LINE 4
 
