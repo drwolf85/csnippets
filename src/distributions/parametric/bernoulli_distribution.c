@@ -85,7 +85,7 @@ double rbern(double prob) {
         u &= m;
         z = (double) (ldexp((double) u, -31) < prob);        
     } 
-    return z - 1.0;
+    return z;
 }
 
 /* Test function */
