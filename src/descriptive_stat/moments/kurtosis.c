@@ -20,12 +20,12 @@ extern inline double fourth_moment(double *x, int n) {
 extern inline double fourth_central_moment(double *x, int n) {
   int i;
   double mu = 0.0, vr = 0.0, sk = 0.0, kr = 0.0, tmp;
-  #pragma omp parallel for simd private(i, tmp) reduction(+ : mu, vr, sk)
+  #pragma omp parallel for simd private(i, tmp) reduction(+ : mu, vr, sk, kr)
   for (i = 0; i < n; i++) {
    tmp = x[i];
    mu += tmp;
    tmp *= x[i];
-   vr += vr;
+   vr += tmp;
    tmp *= x[i];
    sk += tmp;
    tmp *= x[i];
@@ -39,7 +39,7 @@ extern inline double fourth_central_moment(double *x, int n) {
   tmp = mu * mu;
   kr += 6.0 * tmp * vr;
   kr -= 3.0 * tmp * tmp;
-  return sk;
+  return kr;
 }
 
 extern inline double kurtosis(double *x, int n) {
