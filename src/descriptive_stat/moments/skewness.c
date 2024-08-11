@@ -7,8 +7,10 @@ double third_moment(double *x, int n) {
   double sk = 0.0, tmp;
   #pragma omp parallel for simd private(i, tmp) reduction(+ : sk)
   for (i = 0; i < n; i++) {
-   tmp = x[i] * x[i] * x[i];
-   sk += tmp;
+    if (!isnan(x[i])) {
+      tmp = x[i] * x[i] * x[i];
+      sk += tmp;
+    }
   }
   sk /= (double) n;
   return sk;
@@ -19,12 +21,14 @@ double third_central_moment(double *x, int n) {
   double mu = 0.0, vr = 0.0, sk = 0.0, tmp;
   #pragma omp parallel for simd private(i, tmp) reduction(+ : mu, vr, sk)
   for (i = 0; i < n; i++) {
-   tmp = x[i];
-   mu += tmp;
-   tmp *= x[i];
-   vr += tmp;
-   tmp *= x[i];
-   sk += tmp;
+    if (!isnan(x[i])) {
+      tmp = x[i];
+      mu += tmp;
+      tmp *= x[i];
+      vr += tmp;
+      tmp *= x[i];
+      sk += tmp;
+    }
   }
   mu /= (double) n;
   vr /= (double) n;
@@ -39,12 +43,14 @@ double skewness(double *x, int n) {
   double mu = 0.0, sk = 0.0, vr = 0.0, tmp;
   #pragma omp parallel for simd private(i, tmp) reduction(+ : mu, vr, sk)
   for (i = 0; i < n; i++) {
-   tmp = x[i];
-   mu += tmp;
-   tmp *= x[i];
-   vr += tmp;
-   tmp *= x[i];
-   sk += tmp;
+    if (!isnan(x[i])) {
+      tmp = x[i];
+      mu += tmp;
+      tmp *= x[i];
+      vr += tmp;
+      tmp *= x[i];
+      sk += tmp;
+    }
   }
   mu /= (double) n;
   vr /= (double) n;

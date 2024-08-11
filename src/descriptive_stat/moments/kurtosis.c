@@ -7,11 +7,13 @@ extern inline double fourth_moment(double *x, int n) {
   double kr = 0.0, tmp;
   #pragma omp parallel for simd private(i, tmp) reduction(+ : kr)
   for (i = 0; i < n; i++) {
-   tmp = x[i];
-   tmp *= x[i];
-   tmp *= x[i];
-   tmp *= x[i];
-   kr += tmp;
+    if (!isnan(x[i])) {
+      tmp = x[i];
+      tmp *= x[i];
+      tmp *= x[i];
+      tmp *= x[i];
+      kr += tmp;
+    }
   }
   kr /= (double) n;
   return kr;
@@ -22,14 +24,16 @@ extern inline double fourth_central_moment(double *x, int n) {
   double mu = 0.0, vr = 0.0, sk = 0.0, kr = 0.0, tmp;
   #pragma omp parallel for simd private(i, tmp) reduction(+ : mu, vr, sk, kr)
   for (i = 0; i < n; i++) {
-   tmp = x[i];
-   mu += tmp;
-   tmp *= x[i];
-   vr += tmp;
-   tmp *= x[i];
-   sk += tmp;
-   tmp *= x[i];
-   kr += tmp;
+    if (!isnan(x[i])) {
+      tmp = x[i];
+      mu += tmp;
+      tmp *= x[i];
+      vr += tmp;
+      tmp *= x[i];
+      sk += tmp;
+      tmp *= x[i];
+      kr += tmp;
+    }
   }
   mu /= (double) n;
   vr /= (double) n;
@@ -47,14 +51,16 @@ extern inline double kurtosis(double *x, int n) {
   double mu = 0.0, sk = 0.0, vr = 0.0, kr = 0.0, tmp;
   #pragma omp parallel for simd private(i, tmp) reduction(+ : mu, vr, sk, kr)
   for (i = 0; i < n; i++) {
-   tmp = x[i];
-   mu += tmp;
-   tmp *= x[i];
-   vr += tmp;
-   tmp *= x[i];
-   sk += tmp;
-   tmp *= x[i];
-   kr += tmp;
+    if (!isnan(x[i])) {
+      tmp = x[i];
+      mu += tmp;
+      tmp *= x[i];
+      vr += tmp;
+      tmp *= x[i];
+      sk += tmp;
+      tmp *= x[i];
+      kr += tmp;
+    }
   }
   mu /= (double) n;
   vr /= (double) n;
