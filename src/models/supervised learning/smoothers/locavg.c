@@ -23,13 +23,13 @@ typedef struct point_str {
     double y;
 } point;
 
-unsigned locpoly(point *pred, unsigned npred, point *obs, unsigned nobs, unsigned szx, double (*kern)(double), double smooth) {
+unsigned locavg(point *pred, unsigned npred, point *obs, unsigned nobs, unsigned szx, double (*kern)(double), double smooth) {
     unsigned i, j, k;
-    double x, a, b, w, xm , ym, x2, xy, nrm, val;
+    double x, w, ym, nrm, val;
     if (npred > 0 && nobs > 0 && szx > 0 && pred && obs) {
-        #pragma omp parallel for simd private(j, k, x, a, b, w, xm , ym, x2, xy, nrm, val)
+        #pragma omp parallel for simd private(j, k, x, w, ym, nrm, val)
         for (i = 0; i < npred; i++) {
-            xm = ym = x2 = xy = nrm = 0.0;
+           ym = nrm = 0.0;
             for (j = 0; j < nobs; j++) {
                 /* BEGIN: Euclidean normalization... but other ways depend on the metric space at hand */
                 val = 0.0;
@@ -40,21 +40,10 @@ unsigned locpoly(point *pred, unsigned npred, point *obs, unsigned nobs, unsigne
                 x = sqrt(val / (double) szx);
                 /* END: Euclidean normalization */
                 nrm += w = (kern(x * smooth) * smooth);
-                a = x * w;
-                xm += a;
-                x2 += x * a;
-                b = obs[j].y * w;
-                ym += b;
-                xy += b * x;
+                ym += obs[j].y * w;
             }
             nrm = 1.0 / nrm;
-            xm *= nrm;
-            ym *= nrm;
-            x2 *= nrm;
-            xy *= nrm;
-            b = xy - xm * ym;
-            b /= x2 - xm * xm;
-            pred[i].y = ym - b * xm;
+            pred[i].y = ym * nrm;
         }
     }
     else {
@@ -65,10 +54,28 @@ unsigned locpoly(point *pred, unsigned npred, point *obs, unsigned nobs, unsigne
 }
 
 #ifdef DEBUG
+#include <time.h>
 double myfun(double *x) {
     double res = 1.0 + exp(-0.025 + 0.5 * x[0] + 0.2 * sin(x[1] + 1.23));
     res = 1.0 / res;
     return (1.0 - res) * res;
+}
+
+double rnorm(double mu, double sd) {
+   unsigned long u, v, m = (1 << 16) - 1;
+   double a, b, s;
+   u = rand();
+   v = (((u >> 16) & m) | ((u & m) << 16));
+   m = ~(1 << 31);
+   u &= m;
+   v &= m;
+   a = ldexp((double) u, -30) - 1.0;
+   s = a * a;
+   b = ldexp((double) v, -30) - 1.0;
+   s += b * b * (1.0 - s);
+   s = -2.0 * log(s) / s;
+   a = b * sqrtf(s);
+   return mu + sd * a;
 }
 
 int main() {
@@ -76,6 +83,7 @@ int main() {
     unsigned const szx = 2;
     unsigned const nobs = 2001;
     unsigned const npred = 5;
+    srand(time(NULL));
     point *my_obs = (point *) calloc(nobs, sizeof(point));
     point *my_pred = (point *) calloc(npred, sizeof(point));
     if (my_obs && my_pred) {
@@ -83,8 +91,8 @@ int main() {
         for (i = 0; i < nobs; i++) {
             my_obs[i].x = (double *) calloc(szx, sizeof(double));
             if (my_obs[i].x) {
-                my_obs[i].x[0] = -5.0 + (double) i * (10.0 / (double) nobs);
-                my_obs[i].x[1] = 2.0 - (double) i * (4.0 / (double) nobs);
+                my_obs[i].x[0] = rnorm(0.0, 1.0);
+                my_obs[i].x[1] = rnorm(0.0, 0.5);
             }
             my_obs[i].y = myfun(my_obs[i].x);
         }
@@ -92,26 +100,26 @@ int main() {
         for (i = 0; i < npred; i++) {
             my_pred[i].x = (double *) calloc(szx, sizeof(double));
             if (my_pred[i].x) {
-                my_pred[i].x[0] = -5.01 + 0.99 * (double) i * (10.0 / (double) npred);
-                my_pred[i].x[1] = 2.01 - 0.99 * (double) i * (4.0 / (double) npred);
+                my_pred[i].x[0] = rnorm(0.0, 1.0);
+                my_pred[i].x[1] = rnorm(0.0, 0.5);
             }
             my_pred[i].y = nan("");
         }
-        i = locpoly(my_pred, npred, my_obs, nobs, szx, laplacian_kernel, 2.0);
+        i = locavg(my_pred, npred, my_obs, nobs, szx, laplacian_kernel, 4.0);
         if (i == npred) {
             printf("Linear Laplacian smoother:\n");
             for (i = 0; i < npred; i++) {
                 printf("Smooth: %f (true: %f)\n", my_pred[i].y, myfun(my_pred[i].x)); 
             }
         }
-        i = locpoly(my_pred, npred, my_obs, nobs, szx, silverman_kernel, 2.0);
+        i = locavg(my_pred, npred, my_obs, nobs, szx, silverman_kernel, 4.0);
         if (i == npred) {
             printf("Linear Silverman smoother:\n");
             for (i = 0; i < npred; i++) {
                 printf("Smooth: %f (true: %f)\n", my_pred[i].y, myfun(my_pred[i].x)); 
             }
         }
-        i = locpoly(my_pred, npred, my_obs, nobs, szx, gaussian_kernel, 2.0);
+        i = locavg(my_pred, npred, my_obs, nobs, szx, gaussian_kernel, 4.0);
         if (i == npred) {
             printf("Linear Gaussian smoother:\n");
             for (i = 0; i < npred; i++) {
