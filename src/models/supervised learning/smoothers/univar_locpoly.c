@@ -58,7 +58,7 @@ unsigned univar_locpoly(point *pred, unsigned npred, point *obs, unsigned nobs, 
 }
 
 #ifdef DEBUG
-double myfun(x) {
+double myfun(double x) {
     return tanh(-0.025 + 0.05 * x + 0.2 * sin(x + 1.23));
 }
 
