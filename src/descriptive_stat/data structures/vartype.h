@@ -3,12 +3,5 @@
 
 enum vartype {nominal, ordinal, integer, real, complex, other};
 
-typedef struct data_dictionary {
-	char *var_name;
-	vartype type;
-	double scale[2];
-	char *var_desc;
-} data_dict;
-
 #endif
 
