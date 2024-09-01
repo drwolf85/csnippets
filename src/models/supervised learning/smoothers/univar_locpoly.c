@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-//#include <omp.h>
+#include <omp.h>
 
 static double laplacian_kernel(double x) {
     return 0.5 * exp(-fabs(x));
@@ -27,7 +27,7 @@ unsigned univar_locpoly(point *pred, unsigned npred, point *obs, unsigned nobs, 
     unsigned i, j;
     double x, a, b, w, xm , ym, x2, xy, nrm;
     if (npred > 0 && nobs > 0 && pred && obs) {
-        //#pragma omp parallel for simd private(j, x, a, b, w, xm , ym, x2, xy, nrm)
+        #pragma omp parallel for simd private(j, x, a, b, w, xm , ym, x2, xy, nrm)
         for (i = 0; i < npred; i++) {
             xm = ym = x2 = xy = nrm = 0.0;
             for (j = 0; j < nobs; j++) {
