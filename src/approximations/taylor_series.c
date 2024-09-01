@@ -4,15 +4,15 @@
 
 #define H_SEP 0.01
 
-double deriv(double x0, double h, double htype, double(*f)(double), unsigned p) {
+double deriv(double x0, double h, double htype, double(*f)(double), unsigned p, double scaling) {
     double res = 0.0;
     double xl, xr;
     if (p > 0) {
 	    xl = xr = x0;
 	    xr += h * (1.0 - htype);
 	    xl -= h * htype;
-	    res = deriv(xr, h, htype, f, p - 1);
-        res -= deriv(xl, h, htype, f, p - 1);
+	    res = deriv(xr, scaling * h, htype, f, p - 1, scaling);
+	    res -= deriv(xl, scaling * h, htype, f, p - 1, scaling);
         return res / h;
     }
     else {
@@ -27,7 +27,7 @@ double * taylor_expand(double x0, unsigned p, double (*f)(double)) {
 	if (coef) {
 		coef[0] = f(x0) / den;
 		for (i = 1; i <= p; i++) {
-			coef[i] = deriv(x0, 1e-2, 0.5, f, i);
+			coef[i] = deriv(x0, 1e-2, 0.5, f, i, 1.0);
 			den *= (double) i;
 			coef[i] /= den;
 		}
