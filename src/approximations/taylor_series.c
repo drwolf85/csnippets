@@ -35,6 +35,16 @@ double * mac_laurin_expand(unsigned p, double (*f)(double)) {
 	return coef;
 }
 
+double eval_mac_laurin(double x, unsigned p, double *coef) {
+    unsigned i;
+    double res = 0.0, tmp = 1.0;
+    for (i = 0; i < p; i++) {
+        res += tmp * coef[i];
+        tmp *= x;
+    }
+    return res + tmp * coef[i];
+}
+
 double * taylor_expand(double x0, unsigned p, double (*f)(double)) {
 	unsigned i;
 	double *coef = (double *) calloc((p + 1), sizeof(double));
@@ -50,6 +60,17 @@ double * taylor_expand(double x0, unsigned p, double (*f)(double)) {
 	return coef;
 }
 
+double eval_taylor(double x, unsigned p, double *coef, double x0) {
+    unsigned i;
+    double const df = x - x0;
+    double res = 0.0, tmp = 1.0;
+    for (i = 0; i < p; i++) {
+        res += tmp * coef[i];
+        tmp *= df;
+    }
+    return res + tmp * coef[i];
+}
+
 #ifdef DEBUG
 int main() {
     unsigned i;
@@ -63,6 +84,7 @@ int main() {
             printf("+ %.3f * x^%d ", cvec[i], i);
         }
         printf("\n");
+        printf("Evaluation at x = 1: %f\n\n", eval_mac_laurin(1.0, power, cvec));
     }    
     free(cvec);
     cvec = taylor_expand(x_0, power, exp);
@@ -73,8 +95,10 @@ int main() {
             printf("+ %.3f * (x - %.3f)^%d ", cvec[i], x_0, i);
         }
         printf("\n");
+        printf("Evaluation at x = 1: %f\n\n", eval_taylor(1.0, power, cvec, x_0));
     }
     free(cvec);
+    printf("True value at x = 1: %f\n", exp(1.0));
     return 0;
 }
 #endif
