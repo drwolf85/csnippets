@@ -24,20 +24,25 @@ typedef struct point_str {
 } point;
 
 unsigned locavg(point *pred, unsigned npred, point *obs, unsigned nobs, unsigned szx, double (*kern)(double), double smooth) {
-    unsigned i, j, k;
+    unsigned i, j, k, nac;
     double x, w, ym, nrm, val;
     if (npred > 0 && nobs > 0 && szx > 0 && pred && obs) {
-        #pragma omp parallel for simd private(j, k, x, w, ym, nrm, val)
+        #pragma omp parallel for simd private(j, k, x, w, ym, nrm, val, nac)
         for (i = 0; i < npred; i++) {
            ym = nrm = 0.0;
             for (j = 0; j < nobs; j++) {
                 /* BEGIN: Euclidean normalization... but other ways depend on the metric space at hand */
                 val = 0.0;
+                nac = 0;
                 for (k = 0; k < szx; k++) {
                     x = obs[j].x[k] - pred[i].x[k];
+                    if (isnan(x)) {
+                        nac++;
+                        x = 0.0;
+                    }
                     val += x * x;
                 }
-                x = sqrt(val / (double) szx);
+                x = sqrt(val / (double) (szx - nac));
                 /* END: Euclidean normalization */
                 nrm += w = (kern(x * smooth) * smooth);
                 ym += obs[j].y * w;
