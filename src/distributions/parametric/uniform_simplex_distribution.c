@@ -19,16 +19,13 @@ double dunifsimplex(double *v, int p) {
 double * runifsimplex(int p) {
   int i;
   unsigned long const m = ~(1 << 31);
-  unsigned long u;
+  double u;
   double *v = (double *) calloc(p, sizeof(double));
   double z = 0.0;
   if (v) {
     for (i = 0; i < p; i++) {
-        do {
-          u = rand() & m;
-        }
-        while (u == 0);
-        v[i] = -log(ldexp((double) u, -31));
+        u = (0.5 + (double) (rand() & m)) / (1.0 + (double) m);
+        v[i] = -log(u);
         z += v[i];
     }
     z = 1.0 / z;
