@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <math.h>
 #include <omp.h>
 
@@ -243,6 +244,73 @@ double IQR(double *x, size_t n) {
     return(res);
 }
 
+/**
+ * It takes a vector of weights and a vector of values, and returns the weighted quantile of the values
+ * 
+ * @param p the value of probability where to compute the quantile
+ * @param x the array of values
+ * @param w the weights of each observation
+ * @param n the number of data points
+ * 
+ * @return The weighted quantile of the data.
+ */
+double wt_qnt_hst(double p, double *x, double *w, size_t n) {
+    bool allocato = false;
+    size_t i, idx, count = 0;
+    size_t N_BINS = (size_t) sqrt((double) n);
+    double wts[N_BINS];
+    double u, v, ttwt;
+    double range, cdf;
+    
+    if (p < 0 || p > 1) return nan("");
+    
+    if (!w) {
+        w = (double *) malloc(n * sizeof(double));
+        if (w) {
+            for(i = 0; i < n; i++) w[i] = 1.0;
+            allocato = true;
+        }
+    }
+    
+    u = *x;
+    v = u;
+    ttwt = *w;
+    for (i = 1; i < n; i++) {
+        u += (double) (x[i] > u) * (x[i] - u);
+        v += (double) (x[i] < v) * (x[i] - v);
+        ttwt += w[i];
+    }
+    ttwt = 1.0 / ttwt;
+    do {
+        range = u - v;
+        range = (double) N_BINS / range;
+        for (i = 0; i < N_BINS; i++) wts[i] = 0.0;
+        for (i = 0; i < n; i++) {
+            idx = (size_t) (range * (x[i] - v) * (double) (x[i] > v));
+            idx -= (size_t) (idx >= N_BINS) * (idx - N_BINS + 1);
+            wts[idx] += w[i] * ttwt;
+        }
+        cdf = 0.0;
+        for (i = 0; cdf < p && i < N_BINS; i++) {
+            cdf += wts[i];
+        }
+        i -= (size_t) (i >= 1);
+        range = 1.0 / range;
+        v += (double) i * range;
+        u = v + range;
+    } while (range > 1e-16);
+    if (allocato) free(w);
+    return v;
+}
+
+double wt_IQR_hst(double *x, double *w, size_t n) {
+    double prob[2] = {0.25, 0.75};
+    double qrts[2] = {0};
+    qrts[0] = wt_qnt_hst(prob[0], x, w, n);
+    qrts[1] = wt_qnt_hst(prob[1], x, w, n);
+    return qrts[1] - qrts[0];
+}
+
 /* Testing function */
 int main() {
     double x[50] = { 1.04612564, -1.00765414, -0.95323787,  0.89483371, -0.74488022,  0.06825251,
@@ -264,6 +332,8 @@ int main() {
     for (i = 0; i < 5; i++) printf("%0.6f ", fn[i]);
     printf("\n");
     printf("IQR of x = %f\n", IQR(x, 50));
+    printf("The 30 percentile = %f\n", wt_qnt_hst(0.3, x, 0, 50));
+    printf("Weighted IQR of x = %f\n", wt_IQR_hst(x, 0, 50));
     free(fn);
     return 0;
 }
