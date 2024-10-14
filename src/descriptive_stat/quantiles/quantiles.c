@@ -272,33 +272,38 @@ double wt_qnt_hst(double p, double *x, double *w, size_t n) {
         }
     }
     
-    u = *x;
-    v = u;
-    ttwt = *w;
-    for (i = 1; i < n; i++) {
-        u += (double) (x[i] > u) * (x[i] - u);
-        v += (double) (x[i] < v) * (x[i] - v);
-        ttwt += w[i];
+    if (allocato) {
+        u = *x;
+        v = u;
+        ttwt = *w;
+        for (i = 1; i < n; i++) {
+            u += (double) (x[i] > u) * (x[i] - u);
+            v += (double) (x[i] < v) * (x[i] - v);
+            ttwt += w[i];
+        }
+        ttwt = 1.0 / ttwt;
+        do {
+            range = u - v;
+            range = (double) N_BINS / range;
+            for (i = 0; i < N_BINS; i++) wts[i] = 0.0;
+            for (i = 0; i < n; i++) {
+                idx = (size_t) (range * (x[i] - v) * (double) (x[i] > v));
+                idx -= (size_t) (idx >= N_BINS) * (idx - N_BINS + 1);
+                wts[idx] += w[i] * ttwt;
+            }
+            cdf = 0.0;
+            for (i = 0; cdf < p && i < N_BINS; i++) {
+                cdf += wts[i];
+            }
+            i -= (size_t) (i >= 1);
+            range = 1.0 / range;
+            v += (double) i * range;
+            u = v + range;
+        } while (range > 1e-16);
+    } 
+    else {
+        v = nan("");
     }
-    ttwt = 1.0 / ttwt;
-    do {
-        range = u - v;
-        range = (double) N_BINS / range;
-        for (i = 0; i < N_BINS; i++) wts[i] = 0.0;
-        for (i = 0; i < n; i++) {
-            idx = (size_t) (range * (x[i] - v) * (double) (x[i] > v));
-            idx -= (size_t) (idx >= N_BINS) * (idx - N_BINS + 1);
-            wts[idx] += w[i] * ttwt;
-        }
-        cdf = 0.0;
-        for (i = 0; cdf < p && i < N_BINS; i++) {
-            cdf += wts[i];
-        }
-        i -= (size_t) (i >= 1);
-        range = 1.0 / range;
-        v += (double) i * range;
-        u = v + range;
-    } while (range > 1e-16);
     if (allocato) free(w);
     return v;
 }
