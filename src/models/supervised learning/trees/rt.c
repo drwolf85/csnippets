@@ -239,10 +239,12 @@ static void build_tree(node *T, datum *dta, uint64_t n, uint8_t lev, uint64_t *p
     T->split = dta[nmn].x[whv] + (dta[nmx].x[whv] - dta[nmn].x[whv]) * 0.5;
     tss_in_node = wss(dta, T->split, n);
     for (i = 0; i < RT_MAX_RND_TESTS; i++) {
+    /*for (i = nmn + 1; i < nmx; i++) { */
       s = dta[nmn].x[whv] + (dta[nmx].x[whv] - dta[nmn].x[whv]) * RT_UNIF01;
+      /*s = dta[i].x[whv];*/
       wss_in_node = wss(dta, s, n);
       T->split += (double) (wss_in_node < tss_in_node) * (s - T->split);
-      tss_in_node += (double) (wss_in_node < tss_in_node) * wss_in_node;
+      tss_in_node += (double) (wss_in_node < tss_in_node) * (wss_in_node - tss_in_node);
     }
     /* Get leaf indices and compute residuals for the next split */
     for (nl = 0, i = 0; i < n; i++, nl += tmp) {

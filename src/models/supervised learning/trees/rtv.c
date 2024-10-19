@@ -215,8 +215,10 @@ static void build_tree(node *T, datum *dta, uint64_t n, uint8_t lev, uint64_t *p
         /* Randomly find a split to split the data (i.e., method based on random partitioning) */
         spread[j].aux = dta[nmn].x[whv] + (dta[nmx].x[whv] - dta[nmn].x[whv]) * 0.5;
         spread[j].v = wss(dta, spread[j].aux, n);
-        for (i = 0; i < RT_MAX_RND_TESTS; i++) {
-          s = dta[nmn].x[whv] + (dta[nmx].x[whv] - dta[nmn].x[whv]) * RT_UNIF01;
+        /*for (i = 0; i < RT_MAX_RND_TESTS; i++) { */
+	for (i = nmn + 1; i < nmx; i++) {
+        /*  s = dta[nmn].x[whv] + (dta[nmx].x[whv] - dta[nmn].x[whv]) * RT_UNIF01; */
+          s = dta[i].x[whv];
           wss_in_node = wss(dta, s, n);
           spread[j].aux += (double) (wss_in_node < spread[j].v) * (s - spread[j].aux);
           spread[j].v += (double) (wss_in_node < spread[j].v) * (wss_in_node - spread[j].v);
@@ -330,7 +332,7 @@ extern double rt_var_prediction(double *x, node *T) {
 }
 
 #ifdef DEBUG
-/* Code to the debug the functions above*/
+/* Code to the debug the functions above */
 
 #define _MY_N_ 10000
 #define _MY_MAX_DEPTH_ 50
