@@ -3,7 +3,16 @@
 #include <math.h>
 #include <time.h>
 
-double * boot_w_repl(double *y, unsigned n, unsigned max_iter, double (*estimator)(double *, unsigned)) {
+/**
+ * @brief Bootstrap with replacement
+ * 
+ * @param y Pointer to a vector of data
+ * @param n Length of the vector `y`
+ * @param max_iter Maximum number of bootstrap iterations
+ * @param estimator Pointer to a function that produces estimates for a parameter of interest
+ * @return double* 
+ */
+extern double * boot_w_repl(double *y, unsigned n, unsigned max_iter, double (*estimator)(double *, unsigned)) {
 	unsigned b, i;
 	double *repl, *smp;
 	repl = (double *) calloc(max_iter, sizeof(double));
@@ -65,9 +74,9 @@ int main() {
 		free(boot_means);
 		boot_means = boot_w_repl(yvec, N, B, var_4_boot);
 		if (boot_means) printf("\tEstimated variance is %f\n", mean_4_boot(boot_means, B));
+		free(boot_means);
 	}
 	free(yvec);
-	free(boot_means);
 	return 0;
 }
 #endif
