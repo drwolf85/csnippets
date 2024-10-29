@@ -49,7 +49,7 @@ void qrR(double *dta, int *dim, double *r) {
     free(q);
 }
 
-// dyn.load("~/Programmi/test_c/qrR.so")
+// dyn.load("qrR.so")
 // a <- matrix(runif(24), 8, 3)
 // system.time(matrix(.C("qrR", a, dim(a), r = double(9))$r, 3, 3))
 // system.time(qr.R(qr(a)))
