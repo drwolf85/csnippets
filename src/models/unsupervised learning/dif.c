@@ -389,6 +389,11 @@ void iso_model(uint32_t t, double *res, double complex *dta_row_maj, uint32_t nr
 void dif(double *res, double *dta, int *dimD, int *nt, int *nss) {
     uint32_t i, t;
     srand(time(NULL));
+
+    if (*nss <= 0) return;
+    if (*nt <= 0) return;
+    if (dimD[0] <= 0 || dimD[1] <= 0) return;
+    
     H = (double *) malloc(dimD[0] * sizeof(double));
     double complex *dta_row_major = (double complex *) \
         malloc(dimD[0] * dimD[1] * sizeof(double complex));
