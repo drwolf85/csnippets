@@ -45,7 +45,7 @@ static inline void conv_to_simplex(double *dst, double *src, unsigned len) {
 	}
 }
 
-static inline void adj_grad_by_simplex_transf(double *g, double *xw, unsigned p) {
+/*extern void adj_grad_by_simplex_transf(double *g, double *xw, unsigned p) {
 	unsigned i;
 	double tmp, sm = 0.0, *v;
 	v = (double *) calloc(p, sizeof(double));
@@ -61,7 +61,7 @@ static inline void adj_grad_by_simplex_transf(double *g, double *xw, unsigned p)
 		}
 	}
 	free(v);
-}
+}*/
 
 extern void min_within_simplex(double *w, unsigned p, unsigned n_iter, void *info, 
 						void (*grad)(double *, double *, unsigned, void *)) {
@@ -76,8 +76,8 @@ extern void min_within_simplex(double *w, unsigned p, unsigned n_iter, void *inf
     if (mom_s && grd_v && dlt_v) {
 		for (t = 0; t < n_iter; t++) {
 			grad(grd_v, w, p, info); /* Compute the gradient */
+			for (i = 0; i < p; i++) grd_v[i] *= w[i] * (1.0 * w[i]);/* Adjust the gradient to account for the transformation performed at the next line */
 			conv_from_simplex(w, w, p); /* Convert vector from Simplex space to an Euclidean space */
-			adj_grad_by_simplex_transf(grd_v, w, p); /* Adjust the gradient to account for the transformation */
 			for (i = 0; i < p; i++) { /* Adadelta descent step */
 				/* Update second order momentum */
                 mom_s[i] *= RHO;
