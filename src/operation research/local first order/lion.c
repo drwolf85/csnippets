@@ -5,8 +5,8 @@
 #define LEARNING_RATE 0.001
 #define BETA_1 0.9
 #define BETA_2 0.999
-#define EPSILON 1e-8
 #define FACTOR_P 0.01
+
 /**
  * It computes the gradient of the objective function, updates the momentum and the second order
  * momentum, and then updates the parameters using the Lion Algorithm
@@ -126,7 +126,7 @@ int main() {
     double B[25] = {0};
     double y[] = {-0.1315819, 0.1793963, -0.01755624, 0.3562621, 0.4973845, 0.2482045, 0.4099135, 0.2161882, -0.4980195, -0.2372604, 0.230425, -0.1300743, 0.8188969, -0.01759944, 0.2121086, 0.8206889, 0.3538281, 0.5556703, 0.2935429, 0.3055268, -0.2001838, -0.6887512, -0.6138871, -0.7589452, -0.3999022, 0.3259763, 0.9863215, 0.1321867, 1.363693, 0.7105176, -0.4082712, -0.7169683, -0.6221118, -0.764756, -0.3655938, -0.6868594, -0.1536153, -1.051096, -0.3658161, -1.200048, -1.50248, -1.335725, -1.717085, 0.1390045, -0.9140004, -1.488441, -1.692978, -1.967536, -1.009726, -0.6429252};
     struct data_grad myinfo = {n: 10, p: 5, y: y, t: 0};
-    int max_it = 10000;
+    int max_it = 9000;
     int par_len = 25;
     int i;
     lion(B, &par_len, &max_it, &myinfo, obj_grad);

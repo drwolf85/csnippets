@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define RHO .9
-#define EPSILON 1e-5
+#define LEARNING_RATE 0.01
+#define BETA_1 0.9
+#define BETA_2 0.999
+#define FACTOR_P 0.01
 
 typedef struct simplex_vec {
 	double v;
@@ -64,36 +66,90 @@ static inline void conv_to_simplex(double *dst, double *src, unsigned len) {
 }*/
 
 extern void min_within_simplex(double *w, unsigned p, unsigned n_iter, void *info, 
-						void (*grad)(double *, double *, unsigned, void *)) {
+						       void (*grad)(double *, double *, unsigned, void *)) {
 	unsigned i, t;
     double *grd_v;
-    double *dlt_v;
-    double *mom_s;
+    double *mom_m;
+    double *mom_c;
+    double sgn;
 
     grd_v = (double *) malloc(p * sizeof(double));
-    dlt_v = (double *) calloc(p, sizeof(double));
-    mom_s = (double *) calloc(p, sizeof(double));
-    if (mom_s && grd_v && dlt_v) {
+    mom_c = (double *) malloc(p * sizeof(double));
+    mom_m = (double *) calloc(p, sizeof(double));
+    if (mom_m && mom_c && grd_v) {
 		for (t = 0; t < n_iter; t++) {
 			grad(grd_v, w, p, info); /* Compute the gradient */
 			for (i = 0; i < p; i++) grd_v[i] *= w[i] * (1.0 * w[i]);/* Adjust the gradient to account for the transformation performed at the next line */
 			conv_from_simplex(w, w, p); /* Convert vector from Simplex space to an Euclidean space */
-			for (i = 0; i < p; i++) { /* Adadelta descent step */
-				/* Update second order momentum */
-                mom_s[i] *= RHO;
-                mom_s[i] += (1.0 - RHO) * grd_v[i] * grd_v[i];
+                for (i = 0; i < p; i++) { /* Lion descent step */
+                /* Lion update of custom momentum */
+                mom_c[i] = BETA_1 * mom_m[i] + (1.0 - BETA_1) * grd_v[i];
+                /* Update the momentum */
+                mom_m[i] *= BETA_2;
+                mom_m[i] +=  (1.0 - BETA_2) * grd_v[i];
+                /* Lion update */
+                sgn = (double) (mom_c[i] > 0.0) - (double) (mom_c[i] < 0.0);
                 /* Computing the step */
-                grd_v[i] *= sqrt((dlt_v[i] + EPSILON) / (mom_s[i] + EPSILON));
-                w[i] -= grd_v[i];
-                /* Update the deltas */
-                dlt_v[i] *= RHO;
-                dlt_v[i] += (1.0 - RHO) * grd_v[i] * grd_v[i];
-            }
+                grd_v[i] = sgn + FACTOR_P * w[i];
+                grd_v[i] *= LEARNING_RATE;
+				w[i] -= grd_v[i];
+            } /* End of Lion step */
 			conv_to_simplex(w, w, p); /* Transform the unknowns back to the Simplex space*/
 		}
 	}
-    free(mom_s);
+    free(mom_c);
+    free(mom_m);
     free(grd_v);
-    free(dlt_v);
 }
 
+#ifdef DEBUG
+
+double obj(double *w, double *mu, double *sg, unsigned n) {
+	unsigned i, j;
+	double res = 0.0;
+	for (i = 0; i < n; i++) {
+		res -= mu[i] * w[i];
+		for (j = 0; j < n; j++) res += 0.5 * w[i] * w[j] * sg[i + j * n];
+	}
+	return res;
+}
+
+struct test_data {
+	double *mu;
+	double *sg;
+};
+
+void obj_grad(double *g, double *w, unsigned n, void *info) {
+	unsigned i, j;
+	double res = 0.0;
+	struct test_data *dta = (struct test_data *) info;
+	for (i = 0; i < n; i++) {
+		g[i] = -dta->mu[i];
+		for (j = 0; j < n; j++) g[i] += w[j] * dta->sg[i + j * n];
+	}
+}
+
+#include <time.h>
+
+int main() {
+	double mu[] = {82.27257876, 0.05543794, -0.57487430, 20.24679474, -0.75812793};
+	double sg[] = {5.762207, 4.853735, 3.840732, 5.284037, 4.217663, 8.766472, 10.40729, 6.757895, 8.116401, 8.442137, 5.1568, 5.023761, 7.736688, 4.872962, 4.075185, 8.070748, 6.863769, 5.543381, 8.801097, 6.213287, 7.564125, 8.382827, 5.443372, 7.295588, 10.33417};
+	double sm = 0.0, w[5];
+	struct test_data dta = {mu: mu, sg: sg};
+	unsigned i;
+	srand(time(NULL));
+	for (i = 0; i < 5; i++) {
+		w[i] = -log((0.5 + (double) rand()) / (1.0 + (double) RAND_MAX));
+		sm += w[i];
+	}
+	sm = 1.0 / sm;
+	for (i = 0; i < 5; i++) w[i] *= sm;
+	printf("Initial values: "); for (i = 0; i < 5; i++) printf("%e ", w[i]); printf("\n");
+	printf("Objective: %f\n", obj(w, dta.mu, dta.sg, 5));
+	min_within_simplex(w, 5, 30000, &dta, obj_grad);
+	printf("Final values: "); for (i = 0; i < 5; i++) printf("%e ", w[i]); printf("\n");
+	printf("Objective: %f\n", obj(w, dta.mu, dta.sg, 5));
+	return 0;
+}
+
+#endif
