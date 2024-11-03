@@ -70,25 +70,23 @@ extern void min_within_simplex(double *w, unsigned p, unsigned n_iter, void *inf
 	unsigned i, t;
     double *grd_v;
     double *mom_m;
-    double *mom_c;
     double sgn;
 
     grd_v = (double *) malloc(p * sizeof(double));
-    mom_c = (double *) malloc(p * sizeof(double));
     mom_m = (double *) calloc(p, sizeof(double));
-    if (mom_m && mom_c && grd_v) {
+    if (mom_m && grd_v) {
 		for (t = 0; t < n_iter; t++) {
 			grad(grd_v, w, p, info); /* Compute the gradient */
 			for (i = 0; i < p; i++) grd_v[i] *= w[i] * (1.0 * w[i]);/* Adjust the gradient to account for the transformation performed at the next line */
 			conv_from_simplex(w, w, p); /* Convert vector from Simplex space to an Euclidean space */
                 for (i = 0; i < p; i++) { /* Lion descent step */
                 /* Lion update of custom momentum */
-                mom_c[i] = BETA_1 * mom_m[i] + (1.0 - BETA_1) * grd_v[i];
+                sgn = BETA_1 * mom_m[i] + (1.0 - BETA_1) * grd_v[i];
                 /* Update the momentum */
                 mom_m[i] *= BETA_2;
                 mom_m[i] +=  (1.0 - BETA_2) * grd_v[i];
                 /* Lion update */
-                sgn = (double) (mom_c[i] > 0.0) - (double) (mom_c[i] < 0.0);
+                sgn = (double) (sgn > 0.0) - (double) (sgn < 0.0);
                 /* Computing the step */
                 grd_v[i] = sgn + FACTOR_P * w[i];
                 grd_v[i] *= LEARNING_RATE;
@@ -97,7 +95,6 @@ extern void min_within_simplex(double *w, unsigned p, unsigned n_iter, void *inf
 			conv_to_simplex(w, w, p); /* Transform the unknowns back to the Simplex space*/
 		}
 	}
-    free(mom_c);
     free(mom_m);
     free(grd_v);
 }
