@@ -78,6 +78,7 @@ void mpec_epm_lin_lion(double *x, double *c, size_t n, double *A, double *b, siz
                         g[i] = sgn + FACTOR_P * trx;
                         g[i] *= LEARNING_RATE * inprd;
                         trx -= g[i];
+                        /* End of Lion Step */
                         x[i] = tanh(trx);
                     }
                 }
@@ -88,6 +89,7 @@ void mpec_epm_lin_lion(double *x, double *c, size_t n, double *A, double *b, siz
                         sr = x[i] * x[i];
                         g[i] = c[i] - rho * v[i];
                         g[i] *= 1.0 - sr;
+                        /* Begin Lion Step */
                         trx = atanh(x[i]);
                         sgn = BETA_1 * mom_m[i] + (1.0 - BETA_1) * g[i];
                         mom_m[i] *= BETA_2;
@@ -96,6 +98,7 @@ void mpec_epm_lin_lion(double *x, double *c, size_t n, double *A, double *b, siz
                         g[i] = sgn + FACTOR_P * trx;
                         g[i] *= LEARNING_RATE * inprd;
                         trx -= g[i];
+                        /* End of Lion Step */
                         x[i] = tanh(trx);
                     }
                 }
