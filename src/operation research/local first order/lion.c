@@ -8,8 +8,8 @@
 #define FACTOR_P 0.01
 
 /**
- * It computes the gradient of the objective function, updates the momentum and the second order
- * momentum, and then updates the parameters using the Lion Algorithm
+ * It computes the gradient of the objective function, updates the momentum
+ * and then updates the parameters using the Lion Algorithm
  * 
  * @param param the parameters to be optimized
  * @param len the length of the parameter vector
