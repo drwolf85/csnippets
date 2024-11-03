@@ -6,10 +6,12 @@
 #define BETA_1 0.9
 #define BETA_2 0.999
 #define EPSILON 1e-8
+#define FACTOR_P 0.01 
+#define FACTOR_LR 0.001
 
 /**
  * It computes the gradient of the objective function, updates the momentum and the second order
- * momentum, and then updates the parameters using the Adam algorithm
+ * momentum, and then updates the parameters using the AdamW algorithm
  *
  * @param param the parameters to be optimized
  * @param len the length of the parameter vector
@@ -17,13 +19,13 @@
  * @param info a pointer to a structure that contains the data and other information
  * @param grad a routine that computes the gradient of the objective function
  */
-void adam(double *param, int *len, int *n_iter, void *info,
+void adamw(double *param, int *len, int *n_iter, void *info,
           void (*grad)(double *, double *, int *, void *)) {
     int t, i, np = *len;
-    double sc_m, sc_s, pbm = 1.0, pbs = 1.0;
     double *grd_v;
     double *mom_m;
     double *mom_s;
+    double sc_m, sc_s, pbm = 1.0, pbs = 1.0;
 
     grd_v = (double *) malloc(np * sizeof(double));
     mom_m = (double *) calloc(np, sizeof(double));
@@ -46,7 +48,9 @@ void adam(double *param, int *len, int *n_iter, void *info,
                 mom_s[i] *= BETA_2;
                 mom_s[i] +=  (1.0 - BETA_2) * grd_v[i] * grd_v[i];
                 /* Computing the step */
-                grd_v[i] = LEARNING_RATE * (mom_m[i] * sc_m) / (sqrt(mom_s[i] * sc_s) + EPSILON);
+                grd_v[i] = mom_m[i] * sc_m * (sqrt(mom_s[i] * sc_s) + EPSILON);
+                grd_v[i] += param[i] * FACTOR_P;
+                grd_v[i] *= LEARNING_RATE * FACTOR_LR;
                 param[i] -= grd_v[i];
             }
         }

@@ -20,7 +20,7 @@
 void yogi(double *param, int *len, int *n_iter, void *info,
                void (*grad)(double *, double *, int *, void *)) {
     int t, i, np = *len;
-    double sc_m, sc_s, sgn;
+    double sgn, sc_m, sc_s, pbm = 1.0, pbs = 1.0;
     double *grd_v;
     double *mom_m;
     double *mom_s;
@@ -33,22 +33,22 @@ void yogi(double *param, int *len, int *n_iter, void *info,
             /* Update the gradient */
             (*grad)(grd_v, param, len, info);
             /* Scaling factors */
-            sc_m = 1.0 / (1.0 - pow(BETA_1, (double) t));
-            sc_s = 1.0 / (1.0 - pow(BETA_2, (double) t));
+            pbm *= BETA_1;
+            pbs *= BETA_2;
+            sc_m = 1.0 / (1.0 - pbm);
+            sc_s = 1.0 / (1.0 - pbs);
             #pragma omp parallel for simd private(sgn)
             for (i = 0; i < np; i++) {
                 /* Update the momentum */
                 mom_m[i] *= BETA_1;
                 mom_m[i] +=  (1.0 - BETA_1) * grd_v[i];
-                mom_m[i] *= sc_m;
                 /* Yogi update of second order momentum */
                 grd_v[i] *= grd_v[i];
                 sgn = grd_v[i] - mom_s[i];
                 sgn = (sgn > 0.0) * 2.0 - (sgn < 0.0);
                 mom_s[i] += (1.0 - BETA_2) * grd_v[i] * sgn;
-                mom_s[i] *= sc_s;
                 /* Computing the step */
-                grd_v[i] = LEARNING_RATE * mom_m[i] / (sqrt(mom_s[i]) + EPSILON);
+                grd_v[i] = LEARNING_RATE * (mom_m[i] * sc_m) / (sqrt(mom_s[i] * sc_s) + EPSILON);
                 param[i] -= grd_v[i];
             }
         }
