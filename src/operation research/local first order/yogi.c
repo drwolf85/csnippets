@@ -45,7 +45,7 @@ void yogi(double *param, int *len, int *n_iter, void *info,
                 /* Yogi update of second order momentum */
                 grd_v[i] *= grd_v[i];
                 sgn = grd_v[i] - mom_s[i];
-                sgn = (sgn > 0.0) * 2.0 - (sgn < 0.0);
+                sgn = (double) (sgn > 0.0) - (double) (sgn < 0.0);
                 mom_s[i] += (1.0 - BETA_2) * grd_v[i] * sgn;
                 /* Computing the step */
                 grd_v[i] = LEARNING_RATE * (mom_m[i] * sc_m) / (sqrt(mom_s[i] * sc_s) + EPSILON);
