@@ -6,6 +6,17 @@
 #define RUNIF01 ((double) rand() / (double) RAND_MAX)
 #define REXP1 (-log(RUNIF01))
 
+extern double dbeta(double x, double alpha, double beta) {
+	double res = nan("");
+	if (alpha > 0.0 && beta > 0.0 && x > 0.0 && x < 1.0) {
+		res = (alpha - 1.0) * log(x);
+		res += (beta - 1.0) * log1p(-x);
+		res += lgamma(alpha + beta) - lgamma(alpha) - lgamma(beta);
+		res = exp(res);
+	}
+	return res;
+}
+
 static inline double rnorm(double mu, double sd) {
    unsigned long u, v, m = (1 << 16) - 1;
    double a, b, s;
@@ -71,7 +82,7 @@ static inline double rgamma(double alpha, double beta) {
 
 extern double rbeta(double alpha, double beta) {
 	double a = rgamma(alpha, 1.0);
-	double b = rgamma(alpha, 1.0);
+	double b = rgamma(beta, 1.0);
 	return a / (a + b);
 }
 
@@ -81,6 +92,7 @@ int main() {
 	unsigned i;
 	double g;
 	srand(time(NULL));
+	printf("Beta density f(0.5, 0.5, 0.5) = %f\n", dbeta(0.5,0.5,0.5));
 	for (i = 0; i < N; i++) {
 		g = rbeta(0.5, 0.5);
 		printf("%.4f%s", g, (i + 1) % 8 ? " " : "\n");

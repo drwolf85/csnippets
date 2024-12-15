@@ -6,6 +6,16 @@
 #define RUNIF01 ((double) rand() / (double) RAND_MAX)
 #define REXP1 (-log(RUNIF01))
 
+extern double dgamma(double x, double alpha, double beta) {
+	double res = nan("");
+	if (alpha > 0.0 && beta > 0.0 && x > 0.0) {
+		res = (alpha - 1.0) * log(x) - x / beta;
+		res -= alpha * log(beta) + lgamma(alpha);
+		res = exp(res);
+	}
+	return res;
+}
+
 static inline double rnorm(double mu, double sd) {
    unsigned long u, v, m = (1 << 16) - 1;
    double a, b, s;
@@ -75,6 +85,7 @@ int main() {
 	unsigned i;
 	double g;
 	srand(time(NULL));
+	printf("Gamma density f(1, 1, 1) = %f\n", dgamma(1.0,1.0,1.0));
 	for (i = 0; i < N; i++) {
 		g = rgamma(10.999, 0.5);
 		printf("%g%s", g, (i + 1) % 8 ? " " : "\n");

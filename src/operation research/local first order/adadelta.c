@@ -25,7 +25,7 @@ void adadelta(double *param, int *len, int *n_iter, void *info,
     grd_v = (double *) malloc(np * sizeof(double));
     dlt_v = (double *) calloc(np, sizeof(double));
     mom_s = (double *) calloc(np, sizeof(double));
-    if (mom_s && grd_v) {
+    if (mom_s && grd_v && dlt_v) {
         for (t = 0; t < *n_iter; t++) {
             /* Update the gradient */
             (*grad)(grd_v, param, len, info);

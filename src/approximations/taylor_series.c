@@ -4,7 +4,7 @@
 
 #define H_SEP 0.01
 
-double deriv(double x0, double h, double htype, double(*f)(double), unsigned p, double scaling) {
+static double deriv(double x0, double h, double htype, double(*f)(double), unsigned p, double scaling) {
     double res = 0.0;
     double xl, xr;
     if (p > 0) {
@@ -20,7 +20,7 @@ double deriv(double x0, double h, double htype, double(*f)(double), unsigned p, 
     }
 }
 
-double * mac_laurin_expand(unsigned p, double (*f)(double)) {
+extern double * mac_laurin_expand(unsigned p, double (*f)(double)) {
 	unsigned i;
 	double *coef = (double *) calloc((p + 1), sizeof(double));
 	double den = 1.0;
@@ -35,7 +35,7 @@ double * mac_laurin_expand(unsigned p, double (*f)(double)) {
 	return coef;
 }
 
-double eval_mac_laurin(double x, unsigned p, double *coef) {
+extern double eval_mac_laurin(double x, unsigned p, double *coef) {
     unsigned i;
     double res = 0.0, tmp = 1.0;
     for (i = 0; i < p; i++) {
@@ -45,7 +45,7 @@ double eval_mac_laurin(double x, unsigned p, double *coef) {
     return res + tmp * coef[i];
 }
 
-double * taylor_expand(double x0, unsigned p, double (*f)(double)) {
+extern double * taylor_expand(double x0, unsigned p, double (*f)(double)) {
 	unsigned i;
 	double *coef = (double *) calloc((p + 1), sizeof(double));
 	double den = 1.0;
@@ -60,7 +60,7 @@ double * taylor_expand(double x0, unsigned p, double (*f)(double)) {
 	return coef;
 }
 
-double eval_taylor(double x, unsigned p, double *coef, double x0) {
+extern double eval_taylor(double x, unsigned p, double *coef, double x0) {
     unsigned i;
     double const df = x - x0;
     double res = 0.0, tmp = 1.0;

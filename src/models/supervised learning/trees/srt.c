@@ -62,7 +62,7 @@ static int cmp_leaf(void const *aa, void const *bb) {
  * 
  * @param nd Pointer to a `node` structure
  */
-static void free_node(node *nd) {
+extern void free_node(node *nd) {
   if (nd->l) free_node(nd->l);
   if (nd->r) free_node(nd->r);
   free(nd);

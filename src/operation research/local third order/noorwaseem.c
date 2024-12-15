@@ -16,7 +16,7 @@ struct data_vec {
 
 /**
  * It computes the outer product of a triangular matrix with itself
- * 
+ *
  * @param mat the matrix to be transformed
  * @param nn the number of rows and columns in the matrix
  */
@@ -41,7 +41,7 @@ void outer_prod_UpperTri(double *mat, int *nn) {
 
 /**
  * It takes the upper triangular part of a square matrix and inverts it
- * 
+ *
  * @param mat the matrix to be inverted
  * @param nn the number of rows and columns in the matrix
  */
@@ -63,7 +63,7 @@ void inverseUT(double *mat, int *nn) {
 
 /**
  * It takes a symmetric matrix and returns the Cholesky decomposition of it
- * 
+ *
  * @param mat the Hessian matrix
  * @param nn the number of rows and columns in the matrix
  */
@@ -80,7 +80,7 @@ void cholHessMat(double *mat, int *nn) {
     /* Procesing the other rows */
     for (i = 1; i < *nn; i++) {
         /* Loop for j < i */
-        for (j = 0; j < i; j++) 
+        for (j = 0; j < i; j++)
             mat[*nn * j + i] = 0.0;
         /* When j == i */
         k = *nn * i;
@@ -106,7 +106,7 @@ void cholHessMat(double *mat, int *nn) {
 
 /**
  * @brief Inversion of a Hessian Matrix
- * 
+ *
  * @param mat a (nxn) matrix of real numbers stored by column (column-major format)
  * @param nn the number of rows and columns of the Hessian matrix
  */
@@ -118,13 +118,13 @@ void solveHessMat(double *mat, int *nn) {
 
 /**
  * It computes the Noor-Waseem (2009) optimization steps, to minimize a nonlinear error function.
- * The same algorithm can be used to solve a system of nonlinear equations. 
- * 
+ * The same algorithm can be used to solve a system of nonlinear equations.
+ *
  * @param param the parameters to be optimized
  * @param len the length of the parameter vector
  * @param n_iter number of iterations
  * @param info a pointer to a structure that contains the data and other information
- * @param lambda a pointer to a positive value to stabilize the inversion of the hessian 
+ * @param lambda a pointer to a positive value to stabilize the inversion of the hessian
  * @param grad a routine that computes the gradient of the objective function
  * @param hess a routine that computes the Hessian of the objective function
  */
@@ -151,8 +151,8 @@ void noorwaseem(double *param, int *len, int *n_iter, void *info, double *lambda
         for (t = 0; t < *n_iter; t++) {
             /* Update the gradient */
             (*grad)(grd_v, param, len, info);
-            /* Update the Hessian (assumed to be 
-                    1. Symmetrical! and 
+            /* Update the Hessian (assumed to be
+                    1. Symmetrical! and
                     2. Positive definite!) */
             (*hess)(hss_m, param, len, info);
             for (i = 0; i < np; i++) {
@@ -263,7 +263,7 @@ int main() {
     struct data_vec v;
     v.x = calloc(N_DATA, sizeof(double));
     v.n = N_DATA;
-    
+
     printf("Initial values:\n");
     printf("mu = %g and sigma^2 = %g\n", init[0], init[1]);
     if (v.x) {
