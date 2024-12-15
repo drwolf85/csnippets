@@ -34,33 +34,25 @@ static inline double * lm_coef(param_t *coef, double *y, double *dta, int *dim, 
     r = (double *) calloc(cnt * cnt, sizeof(double));
     p = (double *) calloc(cnt, sizeof(double));
     if (p && q && r) {
+    	memcpy(q, dta, dim[0] * cnt * sizeof(double));
         for (i = 0; i < cnt; i++) {
-            #pragma omp for simd
-            for (j = 0; j < dim[0]; j++)
-                q[*dim * i + j] = dta[*dim * coef[i].i + j];
-            for (k = 0; k < i; k++) {
-                tmp = 0.0;
-                v = 0.0;
-                for (j = 0; j < dim[0]; j++) {
-                    tmp += q[*dim * k + j] * dta[*dim * coef[i].i + j];
-                    v += q[*dim * k + j] * q[*dim * k + j];
-                }
-                r[dim[1] * i + k] = tmp / sqrt(v);
-                tmp /= v;
-                #pragma omp for simd
-                for (j = 0; j < dim[0]; j++) 
-                    q[*dim * i + j] -= tmp * q[*dim * k + j];
-            }
             /* Normalization of the column vector */
             tmp = 0.0;
             for (j = 0; j < dim[0]; j++)
                 tmp += q[*dim * i + j] * q[*dim * i + j];
             tmp = sqrt(tmp);
-            r[dim[1] * i + i] = tmp;
+            r[cnt * i + i] = tmp;
             itmp = 1.0 / tmp;
             #pragma omp for simd
             for (j = 0; j < dim[0]; j++)
                 q[*dim * i + j] *= itmp;
+            /* Orthogonalization */   
+            for (j = i + 1; j < cnt; j++) {
+                for (k = 0; k < dim[0]; k++)
+                    r[cnt * j + i] += q[*dim * i + k] * q[*dim * j + k];
+                for (k = 0; k < dim[0]; k++) 
+                    q[*dim * j + k] -= q[*dim * i + k] * r[cnt * j + i];
+            }
         }
         /* Invert matrix R */
         inverseUT(r, &cnt);
@@ -73,7 +65,7 @@ static inline double * lm_coef(param_t *coef, double *y, double *dta, int *dim, 
             }
             #pragma omp for simd
             for (j = 0; j < i; j++) {
-                p[j] += r[dim[1] * k + j] * tmp;
+                p[j] += r[cnt * k + j] * tmp;
             }
         }
     }
@@ -106,7 +98,7 @@ extern param_t * adaForSt(double *y, double *X, int *dimX, int M, double const s
           tmx[dimX[1] * i + j] = X[dimX[0] * j + i];
         }
       }
-      for (m = 0; m < (size_t) M && cnt < mnp; m++) { /* Sequential loop: Do not make it parallel! */
+      for (m = 0; m < (size_t) M && cnt < mnp; m++) { /* Sequential loop: Do not make it parallel! TODO: include early stopping criteria */
         /* Compute residuals */
         memcpy(err, y, sizeof(double) * dimX[0]);
         #pragma omp parallel for simd private(i, j)
@@ -138,7 +130,7 @@ extern param_t * adaForSt(double *y, double *X, int *dimX, int M, double const s
           par[j].i = k;
           cnt++;
         }
-        /* OLS step based on variables from the active set */
+        /* OLS step based on variables from the active set... TODO: implement adaptive QR decomposition */
         tpr = lm_coef(par, y, X, dimX, cnt);
         if (tpr) { /* if a valid pointer, update the parameter estiamtes */
           #pragma omp parallel for simd private(j)
