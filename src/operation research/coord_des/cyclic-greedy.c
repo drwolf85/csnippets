@@ -16,8 +16,7 @@ typedef struct greedy_vec {
 int cmp_grd(const void *aa, const void *bb) {
     vec_t a = *(vec_t *) aa;
     vec_t b = *(vec_t *) bb;
-    int res = (int) (fabs(a.v) < fabs(b.v)) * 2 - 1;
-    return res;
+    return (int) (fabs(a.v) < fabs(b.v)) * 2 - 1;
 }
 
 /** Function to approximate the first derivative
@@ -65,7 +64,7 @@ double asd(double *param, int *len, void *info, int i,
 }
 
 /**
- * Greedy coordinate descent
+ * Cyclic-like semi-greedy coordinate descent
  *
  * @param param the parameters to be optimized
  * @param len the length of the parameter vector
@@ -73,9 +72,9 @@ double asd(double *param, int *len, void *info, int i,
  * @param info a pointer to a structure that contains the data and other information
  * @param objf a routine that computes the objective function
  */
-void greedy_cd(double *param, int *len, int *n_iter, void *info,
+void cyclic_greedy_cd(double *param, int *len, int *n_iter, void *info,
           double (*objf)(double *, int *, void *)) {
-    int t, i, k, np = *len;
+    int t, i, j, k, np = *len;
     double newf, oldf = INFINITY;
     double desc;
     vec_t *grd;
@@ -85,24 +84,22 @@ void greedy_cd(double *param, int *len, int *n_iter, void *info,
     if (grd) {
         /* Compute the objective function */
         newf = objf(param, len, info);
-        k = -1;
         for (t = 0; t < *n_iter * np && newf < oldf; t++) {
             for (i = 0; i < np; i++) {
                 grd[i].v = afd(param, len, info, i, objf);
                 grd[i].i = i;
             }
-            grd[k].v *=  1.0 - (double) (k >=0); 
             qsort(grd, np, sizeof(vec_t), cmp_grd);
-            /* printf("First: %g - vs - Last: %f\n", grd[0].v, grd[np - 1].v); */
-            i = grd[0].i * (int) (grd[0].i != k) + grd[1].i * (int) (grd[0].i == k);
-            for (k = 0; k < *n_iter && newf < oldf; k++) {
-                oldf = newf;
-                desc = afd(param, len, info, i, objf);
-                desc /= EPSILON + fabs(asd(param, len, info, i, objf));
-                param[i] -= LEARNING_RATE * desc;
-                newf = objf(param, len, info);
+            for (j = 0; j < np; j++) {
+                i = grd[j].i;
+                for (k = 0; k < *n_iter && newf < oldf; k++) {
+                    oldf = newf;
+                    desc = afd(param, len, info, i, objf);
+                    desc /= EPSILON + fabs(asd(param, len, info, i, objf));
+                    param[i] -= LEARNING_RATE * desc;
+                    newf = objf(param, len, info);
+                }
             }
-            k = i;
         }
     }
     free(grd);
@@ -131,7 +128,7 @@ int main() {
     printf("Testing the min of 1.0 - (0.5 + 0.5 * cos(x)) * (0.5 + 0.5 * sin(y)):\n");
     printf("\t x = %g, y = %g\n", unk[0], unk[1]);
     printf("\t fun(x, y) = %g\n", function(unk, &p, 0));
-    greedy_cd(unk, &p, &maxit, 0, function);
+    cyclic_greedy_cd(unk, &p, &maxit, 0, function);
     printf("Optimized results:\n");
     printf("\t x = %g, y = %g\n", unk[0], unk[1]);
     printf("\t fun(x, y) = %g\n\n", function(unk, &p, 0));
@@ -145,7 +142,7 @@ int main() {
     for (i++; i < p; i++) printf(", x[%d] = %g", i, unk[i]);
     printf("\n");
     printf("\t fun(x_vec) = %g\n", function2(unk, &p, 0));
-    greedy_cd(unk, &p, &maxit, 0, function2);
+    cyclic_greedy_cd(unk, &p, &maxit, 0, function2);
     printf("Optimized results:\n");
     printf("\t ");
     i = 0;
