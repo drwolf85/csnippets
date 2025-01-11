@@ -9,6 +9,21 @@ typedef struct param {
   int i;
 } param_t;
 
+double swap_col(double *a, double *b, int n) {
+  int i;
+  double res = 0.0;
+  if (a && b && a != b) {
+    #pragma omp parallel for reduction(+ : res)
+    for (i = 0; i < n; i++) {
+      double tmp = a[i];
+      a[i] = b[i];
+      b[i] = tmp;
+      res += a[i] * a[i];
+    }
+  }
+  return res;
+}
+
 static inline void inverseUT(double *mat, int *nn) {
     int i, j, k, pos, n = *nn;
     double tmp;
@@ -25,74 +40,66 @@ static inline void inverseUT(double *mat, int *nn) {
     }
 }
 
-static inline double * lm_coef(param_t *coef, double *y, double *dta, int *dim, int cnt) {
-    int i, j, k;
-    double itmp, tmp, v;
-    double *q, *r, *p;
-
-    q = (double *) malloc(dim[0] * cnt * sizeof(double));
-    r = (double *) calloc(cnt * cnt, sizeof(double));
-    p = (double *) calloc(cnt, sizeof(double));
-    if (p && q && r) {
-    	memcpy(q, dta, dim[0] * cnt * sizeof(double));
-        for (i = 0; i < cnt; i++) {
-            /* Normalization of the column vector */
-            tmp = 0.0;
-            for (j = 0; j < dim[0]; j++)
-                tmp += q[*dim * i + j] * q[*dim * i + j];
-            tmp = sqrt(tmp);
-            r[cnt * i + i] = tmp;
-            itmp = 1.0 / tmp;
-            #pragma omp for simd
-            for (j = 0; j < dim[0]; j++)
-                q[*dim * i + j] *= itmp;
-            /* Orthogonalization */   
-            for (j = i + 1; j < cnt; j++) {
-                for (k = 0; k < dim[0]; k++)
-                    r[cnt * j + i] += q[*dim * i + k] * q[*dim * j + k];
-                for (k = 0; k < dim[0]; k++) 
-                    q[*dim * j + k] -= q[*dim * i + k] * r[cnt * j + i];
-            }
-        }
-        /* Invert matrix R */
-        inverseUT(r, &cnt);
-        /* Computing regression coefficients */
-        for (i = cnt; i > 0; i--) {
-            k = i - 1;
-            tmp = 0.0;
-            for (j = 0; j < dim[0]; j++) {
-                tmp += q[*dim * k + j] * y[j];
-            }
-            #pragma omp for simd
-            for (j = 0; j < i; j++) {
-                p[j] += r[cnt * k + j] * tmp;
-            }
-        }
+double * ls_coef(double *y, double *q, double *r, int *dim, int mnp, int cnt) {
+  int i, j;
+  double tmp;
+  double *par = (double *) calloc(cnt, sizeof(double));
+  double *ir = (double *) calloc(cnt * cnt, sizeof(double));
+  if (y && q && r && dim && par && ir) {
+    #pragma omp parallel for private(i, j) collapse(2)
+    for (j = 0; j < cnt; j++) {
+      for (i = 0; i < cnt; i++) {
+        ir[cnt * j + i] = r[mnp * j + i];
+      }
     }
-    free(r);
-    free(q);
-    return p;
+    inverseUT(ir, &cnt);
+    for (j = cnt - 1; j >= 0; j--) {
+      tmp = 0.0;
+      for (i = 0; i < *dim; i++) {
+          tmp += q[*dim * j + i] * y[i];
+      }
+      #pragma omp for simd
+      for (i = 0; i <= j; i++) {
+          par[j] += ir[cnt * j + i] * tmp;
+      }
+    }
+  }
+  free(ir);
+  return par;
 }
 
 extern param_t * adaForSt(double *y, double *X, int *dimX, int M, double const step_sz) {
-  /* Code written assuming `X` matrix is stored in column major format */
   param_t *par = NULL;
+  int *idx;
   int mnp, cnt = 0;
   double *grd = NULL;
   double *err = NULL;
   double *tmx = NULL;
-  
-  double mxgr, tmp;
+  double *Xcp = NULL;
   double *tpr = NULL;
-
   size_t m, i, j, k;
+  double *q, *r;
+  double mxgr, tmp;
+
   if (y && X && dimX && M > 0 && step_sz > 0.0 && step_sz <= 1.0) {
     mnp = dimX[0] < dimX[1] ? dimX[0] : dimX[1];
-    par = (param_t *) calloc(dimX[1], sizeof(param_t)); /* coefficient */
+    par = (param_t *) calloc(dimX[1], sizeof(param_t)); /* coefficient (and active set) */
+    idx = (int *) calloc(dimX[1], sizeof(int)); /* index of coefficients */
     grd = (double *) calloc(dimX[1], sizeof(double)); /* gradient */
     err = (double *) malloc(dimX[0] * sizeof(double)); /* residuals */
-    tmx = (double *) malloc(dimX[0] * dimX[1] * sizeof(double)); /* residuals */
-    if (par && err && tmx && grd && tpr) {
+    tmx = (double *) malloc(dimX[0] * dimX[1] * sizeof(double)); /* transposition of X */
+    Xcp = (double *) malloc(dimX[0] * dimX[1] * sizeof(double)); /* copy of X */
+    q = (double *) malloc(dimX[0] * mnp * sizeof(double));
+    r = (double *) calloc(mnp * dimX[1], sizeof(double));
+    if (idx && par && grd && err && tmx && Xcp && q && r) {
+      /* Copy `X' in 'Xcp` for QR updates */
+      memcpy(Xcp, X, dimX[0] * dimX[1] * sizeof(double));
+      /* Indexing for QR updates */
+      #pragma omp parallel for
+      for (j = 0; j < dimX[1]; j++) {
+        idx[j] = j;
+      }
+
       /* Transpose X for quick data access */
       #pragma omp parallel for private(i, j) collapse(2)
       for (i = 0; i < dimX[0]; i++) {
@@ -100,7 +107,11 @@ extern param_t * adaForSt(double *y, double *X, int *dimX, int M, double const s
           tmx[dimX[1] * i + j] = X[dimX[0] * j + i];
         }
       }
-      for (m = 0; m < (size_t) M && cnt < mnp; m++) { /* Sequential loop: Do not make it parallel! TODO: include early stopping criteria */
+      /*  LASSO... */      
+      
+      /* Sequential loop for Adaptive ForSt */
+      for (m = 0; m < (size_t) M && cnt < mnp /** TODO: include an early stopping rule */; m++) {
+
         /* Compute residuals */
         memcpy(err, y, sizeof(double) * dimX[0]);
         #pragma omp parallel for simd private(i, j)
@@ -117,6 +128,7 @@ extern param_t * adaForSt(double *y, double *X, int *dimX, int M, double const s
             grd[j] += X[dimX[0] * j + i] * err[i];
           }
         }
+
         /* Find the variable with the maximum-absolute-gradient value */
         k = 0;
         mxgr = -0.5;
@@ -129,24 +141,54 @@ extern param_t * adaForSt(double *y, double *X, int *dimX, int M, double const s
         for (j = 0; j < cnt && par[j].i != k && j < dimX[1]; j++);
         if (j == cnt && j < dimX[1]) {
           par[j].i = k;
+          idx[cnt] ^= idx[k];
+          idx[k] ^= idx[cnt];
+          idx[cnt] ^= idx[k];
+
+          /* Swap data columns and variable indices*/
+          tmp = swap_col(&Xcp[dimX[0] * cnt], &Xcp[dimX[0] * k], dimX[0]);
+          swap_col(&r[mnp * cnt], &r[mnp * k], mnp);
+          tmp = sqrt(tmp);
+          r[cnt * mnp + cnt] = tmp; /* Update matrix R */
+
+          /* Update matrix Q */
+          tmp = 1.0 / tmp;
+          #pragma omp parallel for
+          for (i = 0; i < dimX[0]; i++) {
+            q[dimX[0] * cnt + i] = Xcp[dimX[0] * cnt + i] * tmp;
+          }
+          /* Orthogonalization */
+          #pragma omp parallel for private(j, i)
+          for (j = cnt + 1; j < dimX[1]; j++) {
+              for (i = 0; i < dimX[0]; i++)
+                  r[j * mnp + cnt] +=  q[dimX[0] * cnt + i] * Xcp[dimX[0] * j + i];
+              for (i = 0; i < dimX[0]; i++) 
+                  Xcp[dimX[0] * j + i] -= q[dimX[0] * cnt + i] * r[j * mnp + cnt];
+          }
+
+          /* Update the count of the active set */
           cnt++;
         }
-        /* OLS step based on variables from the active set... TODO: implement adaptive QR decomposition */
-        tpr = lm_coef(par, y, X, dimX, cnt);
-        if (tpr) { /* if a valid pointer, update the parameter estiamtes */
+        /* OLS step based on variables from the active set */
+        tpr = ls_coef(y, q, r, dimX, mnp, cnt);
+        if (tpr) {/* if a valid pointer, update the parameter estiamtes */
           #pragma omp parallel for simd private(j)
           for (j = 0; j < cnt; j++) {
             par[j].v *= (1.0 - step_sz);
             par[j].v = step_sz * tpr[j];
-          }        
+          }
         }
         free(tpr);
       }
     }
+    free(par);
+    free(idx);
     free(grd);
-    free(tmx);
     free(err);
+    free(tmx);
+    free(Xcp);
+    free(q);
+    free(r);
   }
   return par;
 }
-
