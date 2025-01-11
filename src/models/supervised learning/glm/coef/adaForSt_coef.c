@@ -76,20 +76,22 @@ static inline double * lm_coef(param_t *coef, double *y, double *dta, int *dim, 
 
 extern param_t * adaForSt(double *y, double *X, int *dimX, int M, double const step_sz) {
   /* Code written assuming `X` matrix is stored in column major format */
-  double mxgr, tmp;
-  int mnp, cnt = 0;
   param_t *par = NULL;
-  double *tpr = NULL;
+  int mnp, cnt = 0;
   double *grd = NULL;
   double *err = NULL;
   double *tmx = NULL;
+  
+  double mxgr, tmp;
+  double *tpr = NULL;
+
   size_t m, i, j, k;
   if (y && X && dimX && M > 0 && step_sz > 0.0 && step_sz <= 1.0) {
+    mnp = dimX[0] < dimX[1] ? dimX[0] : dimX[1];
     par = (param_t *) calloc(dimX[1], sizeof(param_t)); /* coefficient */
     grd = (double *) calloc(dimX[1], sizeof(double)); /* gradient */
     err = (double *) malloc(dimX[0] * sizeof(double)); /* residuals */
     tmx = (double *) malloc(dimX[0] * dimX[1] * sizeof(double)); /* residuals */
-    mnp = dimX[0] < dimX[1] ? dimX[0] : dimX[1];
     if (par && err && tmx && grd && tpr) {
       /* Transpose X for quick data access */
       #pragma omp parallel for private(i, j) collapse(2)
@@ -118,7 +120,6 @@ extern param_t * adaForSt(double *y, double *X, int *dimX, int M, double const s
         /* Find the variable with the maximum-absolute-gradient value */
         k = 0;
         mxgr = -0.5;
-        #pragma omp parallel for simd private(j, tmp) reduction(+ : mxgr, k)
         for (j = 0; j < dimX[1]; j++) {
           tmp = fabs(grd[j]);
           k += (size_t) (mxgr < tmp) * ((int) j - k);
