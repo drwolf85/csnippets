@@ -41,10 +41,12 @@ void qrQR_mgs(double *dta, int *dim, double *q, double *r) {
     }
 }
 
-// dyn.load("~/Programmi/test_c/qrQR.so")
+// dyn.load("qrQR.so")
 // a <- matrix(runif(24), 8, 3)
 // system.time(res <- .C("qrQR_mgs", a, dim(a), q = double(24), r = double(9))[c("q", "r")])
 // array(res$q, dim=dim(a))
 // matrix(res$r, ncol(a), ncol(a))
 // array(res$q, dim=dim(a))%*%matrix(res$r, ncol(a), ncol(a))
 // system.time(qr.R(qr(a)))
+
+solve(matrix(res$r, ncol(a), ncol(a))) %*% t(array(res$q, dim=dim(a)))
