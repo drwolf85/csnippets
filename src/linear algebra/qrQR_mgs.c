@@ -16,7 +16,7 @@
  */
 void qrQR_mgs(double *dta, int *dim, double *q, double *r) {
     int i, j, k;
-    double itmp, tmp, v;
+    double itmp, tmp;
 
     memset(r, 0, dim[1] * dim[1] * sizeof(double));
     memcpy(q, dta, dim[0] * dim[1] * sizeof(double));

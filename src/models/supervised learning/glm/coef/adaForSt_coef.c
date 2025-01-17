@@ -80,14 +80,14 @@ static inline void ols_coef(double *par, double *y, double *q, double *r, int *d
       print_mat(ir, cnt, cnt);
       printf("\n");
     #endif*/
-    for (j = cnt - 1; j >= 0; j--) {
+    for (i = cnt; i > 0; i--) {
       tmp = 0.0;
-      for (i = 0; i < *dim; i++) {
-          tmp += q[*dim * j + i] * y[i];
+      for (j = 0; j < dim[0]; j++) {
+          tmp += q[dim[0] * (i - 1) + j] * y[j];
       }
       #pragma omp for simd
-      for (i = 0; i <= j; i++) {
-          par[j] += ir[cnt * j + i] * tmp;
+      for (j = 0; j < i; j++) {
+          par[j] += ir[cnt * (i - 1) + j] * tmp;
       }
     }
   }
@@ -104,7 +104,7 @@ static inline void resid(double *err, double *y, int *dimX, int cnt, double *tmx
     }
   }
 }
-static inline double BayesInfoCriterion(double *err, int *dimX, int cnt) {
+static inline double BayesInfoCriterion(double *err, int *dimX, int cnt, double const step_sz) {
   double res = 0.0;
   int i;
   #pragma omp parallel for simd private(i) reduction(+ : res)
@@ -112,8 +112,8 @@ static inline double BayesInfoCriterion(double *err, int *dimX, int cnt) {
     res += err[i] * err[i];
   }
   res /= (double) dimX[0];
-  // res -= 0.5 * (double) cnt * log((double) dimX[0]);
-  res = (double) dimX[0] * log(res) - (double) cnt * log((double) dimX[0]); /* according to Raymaekers et al. (2023) */
+  // res += 0.5 * (double) cnt * log((double) dimX[0]); /* According to Schwarz */
+  res = (double) dimX[0] * log(res) + step_sz * (double) cnt * log((double) dimX[0]); /* according to Raymaekers et al. (2023) */
   return res;
 }
 
@@ -162,11 +162,14 @@ extern param_t * adaForSt(int *card_AS, double *y, double *X, int *dimX, size_t 
       resid(err, y, dimX, cnt, tmx, par);
 
       /*  LASSO... or BIC for early stopping rule */
-      nBIC = BayesInfoCriterion(err, dimX, cnt);
+      nBIC = BayesInfoCriterion(err, dimX, cnt, step_sz);
     
       /* Sequential loop for Adaptive ForSt */
       for (m = 0; m < (size_t) M && cnt < mnp && nBIC < oBIC; m++) {
         oBIC = nBIC;
+        // #ifdef DEBUG
+        // printf("BIC: %g\n", oBIC);
+        // #endif
         /* Gradient */
         #pragma omp parallel for private(j, i)
         for (j = 0; j < dimX[1]; j++) {
@@ -187,7 +190,7 @@ extern param_t * adaForSt(int *card_AS, double *y, double *X, int *dimX, size_t 
         /* Update the active set */
         for (j = 0; j < cnt && par[j].i != k && j < dimX[1]; j++);
         if (j == cnt && j < dimX[1] && k >= cnt) {
-          /*#ifdef DEBUG
+            /*#ifdef DEBUG
           printf("%d <swap> %d\n", j, k);
           #endif*/
           /* Swap variable indices and data columns */
@@ -241,7 +244,7 @@ extern param_t * adaForSt(int *card_AS, double *y, double *X, int *dimX, size_t 
         resid(err, y, dimX, cnt, tmx, par);
 
         /*  LASSO... or BIC for early stopping rule */
-        nBIC = BayesInfoCriterion(err, dimX, cnt);
+        nBIC = BayesInfoCriterion(err, dimX, cnt, step_sz);
       }
     }
     #ifdef DEBUG
