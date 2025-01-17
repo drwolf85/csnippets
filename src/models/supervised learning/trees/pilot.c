@@ -55,8 +55,8 @@ typedef struct full_tree {
  */
 double clamp(double x, double lw, double up) {
     double res = x;
-    res += (double) (x > up) * (up - res);
-    res += (double) (x < lw) * (lw - res);
+    if (x > up) return up;
+    if (x < lw) return lw;
     return res;
 }
 
@@ -71,8 +71,10 @@ static inline void range(double *r, double *x, size_t n) {
 	double mx, mn;
 	mx = mn = x[0];
 	for (size_t i = 1; i < n; i++) {
-		mx += (double) (mx < x[i]) * (x[i] - mx);
-		mn += (double) (x[i] < mn) * (x[i] - mn);
+		 /* mx += (double) (mx < x[i]) * (x[i] - mx);
+		mn += (double) (x[i] < mn) * (x[i] - mn); */
+		if (mx < x[i]) mx = x[i];
+		if (mn > x[i]) mn = x[i];
 	}
 	r[0] = mn;
 	r[1] = mx;
@@ -273,25 +275,30 @@ void BIC_select(leaf_model *mod, size_t *ivec, size_t *idx, size_t n, double *x,
 		mod->best_x = j;
 		mod->best_pivot = INFINITY;
 		mod->lm_l.con_par = par[0];
+		mod->lm_l.lin_par = 0.0;
+		mod->lm_r.con_par = par[0];
+		mod->lm_r.lin_par = 0.0;
 		mod->best_bic = bic;
 	}
-	/* Compute parameter estimates and BIC for linear */
-	par[0] = sx[0] + sx[1];
-	par[1] = (sxy[0] + sxy[1] - par[0] * par[2]) / (sxx[0] + sxx[1] - par[0] * par[0] * ninv);
-	par[0] *= ninv * par[1];
-	par[0] = par[2] - par[0];
-	bic = syy[0] + syy[1] + par[0] * par[0] * (double) n;
-	bic += (sxx[0] + sxx[1]) * par[1] * par[1];
-	bic -= 2.0 * (par[0] * (sy[0] + sy[1]) + par[1] * (sxy[0] + sxy[1]) - par[0] * par[1] * (sx[0] + sx[1]));
-	bic = (double) n * log(bic * ninv) + 2.0 * log((double) n); /* BIC_LIN */
-	if (bic < mod->best_bic) {
-		mod->best_model = LIN;
-		mod->best_x = j;
-		mod->best_pivot = INFINITY;
-		mod->lm_l.con_par = par[0];
-		mod->lm_l.lin_par = par[1];
-		mod->best_bic = bic;
-	}
+	// /* Compute parameter estimates and BIC for linear */
+	// par[0] = sx[0] + sx[1];
+	// par[1] = (sxy[0] + sxy[1] - par[0] * par[2]) / (sxx[0] + sxx[1] - par[0] * par[0] * ninv);
+	// par[0] *= ninv * par[1];
+	// par[0] = par[2] - par[0];
+	// bic = syy[0] + syy[1] + par[0] * par[0] * (double) n;
+	// bic += (sxx[0] + sxx[1]) * par[1] * par[1];
+	// bic -= 2.0 * (par[0] * (sy[0] + sy[1]) + par[1] * (sxy[0] + sxy[1]) - par[0] * par[1] * (sx[0] + sx[1]));
+	// bic = (double) n * log(bic * ninv) + 2.0 * log((double) n); /* BIC_LIN */
+	// if (bic < mod->best_bic) {
+	// 	mod->best_model = LIN;
+	// 	mod->best_x = j;
+	// 	mod->best_pivot = INFINITY;
+	// 	mod->lm_l.con_par = par[0];
+	// 	mod->lm_l.lin_par = par[1];
+	// 	mod->lm_r.con_par = par[0];
+	// 	mod->lm_r.lin_par = par[1];
+	// 	mod->best_bic = bic;
+	// }
 	inl = 1.0 / (double) *n_leaf;
 	inmnl = 1.0 / (double) (n - *n_leaf);
 	/* Compute parameter estimates and BIC for piecewise constant */
@@ -305,60 +312,62 @@ void BIC_select(leaf_model *mod, size_t *ivec, size_t *idx, size_t n, double *x,
 		mod->best_x = j;
 		mod->best_pivot = x[*n_leaf];
 		mod->lm_l.con_par = par[0];
+		mod->lm_l.lin_par = 0.0;
 		mod->lm_r.con_par = par[2];
+		mod->lm_r.lin_par = 0.0;
 		mod->best_bic = bic;
 	}
-	/* Compute parameter estimates and BIC for broken linear */
-	par[1] = (sxy[0] - sx[0] * par[0]) / (sxx[0] - sx[0] * sx[0] * inl);
-	par[2] = (sxy[1] - sx[1] * par[2]) / (sxx[1] - sx[1] * sx[1] * inmnl);
-	par[0] = (sy[0] + sy[1]) * ninv - par[1] * sx[0] * inl - par[2] * sx[1] * inmnl;
-	bic  = par[0] * par[1] * sx[0];
-	bic += par[0] * par[2] * sx[1];
-	bic -= par[1] * sxy[0];
-	bic -= par[2] * sxy[1];
-	bic -= par[0] * (sy[0] + sy[1]);
-	bic *= 2.0;
-	bic += syy[0] + syy[1] + par[0] * par[0] * (double) n;
-	bic += sxx[0] * par[1] * par[1];
-	bic += sxx[1] * par[2] * par[2];
-	bic = (double) n * log(bic * ninv) + 5.0 * log((double) n); /* BIC_BLIN */
-	if (bic < mod->best_bic) {
-		mod->best_model = BLIN;
-		mod->best_x = j;
-		mod->best_pivot = x[*n_leaf];
-		mod->lm_l.con_par = par[0];
-		mod->lm_l.lin_par = par[1];
-		mod->lm_r.con_par = par[0];
-		mod->lm_r.lin_par = par[2];
-		mod->best_bic = bic;
-	}
-	/* Compute parameter estimates and BIC for piecewise linear */
-	par[3] = par[2];
-	par[0] = (sy[0] - par[1] * sx[0]) * inl;
-	par[2] = (sy[1] - par[3] * sx[1]) * inmnl;
-	bic  = par[0] * par[1] * sx[0];
-	bic += par[2] * par[3] * sx[1];
-	bic -= par[1] * sxy[0];
-	bic -= par[3] * sxy[1];
-	bic -= par[0] * sy[0];
-	bic -= par[2] * sy[1];
-	bic *= 2.0;
-	bic += syy[0] + syy[1];
-	bic += par[0] * par[0] * (double) (*n_leaf);
-	bic += par[2] * par[2] * (double) (n - *n_leaf);
-	bic += sxx[0] * par[1] * par[1];
-	bic += sxx[1] * par[3] * par[3];
-	bic = (double) n * log(bic * ninv) + 7.0 * log((double) n); /* BIC_PLIN */
-	if (bic < mod->best_bic) {
-		mod->best_model = BLIN;
-		mod->best_x = j;
-		mod->best_pivot = x[*n_leaf];
-		mod->lm_l.con_par = par[0];
-		mod->lm_l.lin_par = par[1];
-		mod->lm_r.con_par = par[2];
-		mod->lm_r.lin_par = par[3];
-		mod->best_bic = bic;
-	}
+	// /* Compute parameter estimates and BIC for broken linear */
+	// par[1] = (sxy[0] - sx[0] * par[0]) / (sxx[0] - sx[0] * sx[0] * inl);
+	// par[2] = (sxy[1] - sx[1] * par[2]) / (sxx[1] - sx[1] * sx[1] * inmnl);
+	// par[0] = (sy[0] + sy[1]) * ninv - par[1] * sx[0] * inl - par[2] * sx[1] * inmnl;
+	// bic  = par[0] * par[1] * sx[0];
+	// bic += par[0] * par[2] * sx[1];
+	// bic -= par[1] * sxy[0];
+	// bic -= par[2] * sxy[1];
+	// bic -= par[0] * (sy[0] + sy[1]);
+	// bic *= 2.0;
+	// bic += syy[0] + syy[1] + par[0] * par[0] * (double) n;
+	// bic += sxx[0] * par[1] * par[1];
+	// bic += sxx[1] * par[2] * par[2];
+	// bic = (double) n * log(bic * ninv) + 5.0 * log((double) n); /* BIC_BLIN */
+	// if (bic < mod->best_bic) {
+	// 	mod->best_model = BLIN;
+	// 	mod->best_x = j;
+	// 	mod->best_pivot = x[*n_leaf];
+	// 	mod->lm_l.con_par = par[0];
+	// 	mod->lm_l.lin_par = par[1];
+	// 	mod->lm_r.con_par = par[0];
+	// 	mod->lm_r.lin_par = par[2];
+	// 	mod->best_bic = bic;
+	// }
+	// /* Compute parameter estimates and BIC for piecewise linear */
+	// par[3] = par[2];
+	// par[0] = (sy[0] - par[1] * sx[0]) * inl;
+	// par[2] = (sy[1] - par[3] * sx[1]) * inmnl;
+	// bic  = par[0] * par[1] * sx[0];
+	// bic += par[2] * par[3] * sx[1];
+	// bic -= par[1] * sxy[0];
+	// bic -= par[3] * sxy[1];
+	// bic -= par[0] * sy[0];
+	// bic -= par[2] * sy[1];
+	// bic *= 2.0;
+	// bic += syy[0] + syy[1];
+	// bic += par[0] * par[0] * (double) (*n_leaf);
+	// bic += par[2] * par[2] * (double) (n - *n_leaf);
+	// bic += sxx[0] * par[1] * par[1];
+	// bic += sxx[1] * par[3] * par[3];
+	// bic = (double) n * log(bic * ninv) + 7.0 * log((double) n); /* BIC_PLIN */
+	// if (bic < mod->best_bic) {
+	// 	mod->best_model = BLIN;
+	// 	mod->best_x = j;
+	// 	mod->best_pivot = x[*n_leaf];
+	// 	mod->lm_l.con_par = par[0];
+	// 	mod->lm_l.lin_par = par[1];
+	// 	mod->lm_r.con_par = par[2];
+	// 	mod->lm_r.lin_par = par[3];
+	// 	mod->best_bic = bic;
+	// }
 
 	for (i = 0; i < n_tests; i++) {
 		/* Update sufficient statistics */
@@ -388,57 +397,57 @@ void BIC_select(leaf_model *mod, size_t *ivec, size_t *idx, size_t n, double *x,
 			mod->lm_r.con_par = par[2];
 			mod->best_bic = bic;
 		}
-		/* Compute parameter estimates and BIC for broken linear */
-		par[1] = (sxy[0] - sx[0] * par[0]) / (sxx[0] - sx[0] * sx[0] * inl);
-		par[2] = (sxy[1] - sx[1] * par[2]) / (sxx[1] - sx[1] * sx[1] * inmnl);
-		par[0] = (sy[0] + sy[1]) * ninv - par[1] * sx[0] * inl - par[2] * sx[1] * inmnl;
-		bic  = par[0] * par[1] * sx[0];
-		bic += par[0] * par[2] * sx[1];
-		bic -= par[1] * sxy[0];
-		bic -= par[2] * sxy[1];
-		bic -= par[0] * (sy[0] + sy[1]);
-		bic *= 2.0;
-		bic += syy[0] + syy[1] + par[0] * par[0] * (double) n;
-		bic += sxx[0] * par[1] * par[1];
-		bic += sxx[1] * par[2] * par[2];
-		bic = (double) n * log(bic * ninv) + 5.0 * log((double) n); /* BIC_BLIN */
-		if (bic < mod->best_bic) {
-			mod->best_model = BLIN;
-			mod->best_x = j;
-			mod->best_pivot = x[*n_leaf + i + 1];
-			mod->lm_l.con_par = par[0];
-			mod->lm_l.lin_par = par[1];
-			mod->lm_r.con_par = par[0];
-			mod->lm_r.lin_par = par[2];
-			mod->best_bic = bic;
-		}
-		/* Compute parameter estimates and BIC for piecewise linear */
-		par[3] = par[2];
-		par[0] = (sy[0] - par[1] * sx[0]) * inl;
-		par[2] = (sy[1] - par[3] * sx[1]) * inmnl;
-		bic  = par[0] * par[1] * sx[0];
-		bic += par[2] * par[3] * sx[1];
-		bic -= par[1] * sxy[0];
-		bic -= par[3] * sxy[1];
-		bic -= par[0] * sy[0];
-		bic -= par[2] * sy[1];
-		bic *= 2.0;
-		bic += syy[0] + syy[1];
-		bic += par[0] * par[0] * (double) (*n_leaf + i + 1);
-		bic += par[2] * par[2] * (double) (n - *n_leaf - i - 1);
-		bic += sxx[0] * par[1] * par[1];
-		bic += sxx[1] * par[3] * par[3];
-		bic = (double) n * log(bic * ninv) + 7.0 * log((double) n); /* BIC_PLIN */
-		if (bic < mod->best_bic) {
-			mod->best_model = BLIN;
-			mod->best_x = j;
-			mod->best_pivot = x[*n_leaf + i + 1];
-			mod->lm_l.con_par = par[0];
-			mod->lm_l.lin_par = par[1];
-			mod->lm_r.con_par = par[2];
-			mod->lm_r.lin_par = par[3];
-			mod->best_bic = bic;
-		}
+		// /* Compute parameter estimates and BIC for broken linear */
+		// par[1] = (sxy[0] - sx[0] * par[0]) / (sxx[0] - sx[0] * sx[0] * inl);
+		// par[2] = (sxy[1] - sx[1] * par[2]) / (sxx[1] - sx[1] * sx[1] * inmnl);
+		// par[0] = (sy[0] + sy[1]) * ninv - par[1] * sx[0] * inl - par[2] * sx[1] * inmnl;
+		// bic  = par[0] * par[1] * sx[0];
+		// bic += par[0] * par[2] * sx[1];
+		// bic -= par[1] * sxy[0];
+		// bic -= par[2] * sxy[1];
+		// bic -= par[0] * (sy[0] + sy[1]);
+		// bic *= 2.0;
+		// bic += syy[0] + syy[1] + par[0] * par[0] * (double) n;
+		// bic += sxx[0] * par[1] * par[1];
+		// bic += sxx[1] * par[2] * par[2];
+		// bic = (double) n * log(bic * ninv) + 5.0 * log((double) n); /* BIC_BLIN */
+		// if (bic < mod->best_bic) {
+		// 	mod->best_model = BLIN;
+		// 	mod->best_x = j;
+		// 	mod->best_pivot = x[*n_leaf + i + 1];
+		// 	mod->lm_l.con_par = par[0];
+		// 	mod->lm_l.lin_par = par[1];
+		// 	mod->lm_r.con_par = par[0];
+		// 	mod->lm_r.lin_par = par[2];
+		// 	mod->best_bic = bic;
+		// }
+		// /* Compute parameter estimates and BIC for piecewise linear */
+		// par[3] = par[2];
+		// par[0] = (sy[0] - par[1] * sx[0]) * inl;
+		// par[2] = (sy[1] - par[3] * sx[1]) * inmnl;
+		// bic  = par[0] * par[1] * sx[0];
+		// bic += par[2] * par[3] * sx[1];
+		// bic -= par[1] * sxy[0];
+		// bic -= par[3] * sxy[1];
+		// bic -= par[0] * sy[0];
+		// bic -= par[2] * sy[1];
+		// bic *= 2.0;
+		// bic += syy[0] + syy[1];
+		// bic += par[0] * par[0] * (double) (*n_leaf + i + 1);
+		// bic += par[2] * par[2] * (double) (n - *n_leaf - i - 1);
+		// bic += sxx[0] * par[1] * par[1];
+		// bic += sxx[1] * par[3] * par[3];
+		// bic = (double) n * log(bic * ninv) + 7.0 * log((double) n); /* BIC_PLIN */
+		// if (bic < mod->best_bic) {
+		// 	mod->best_model = BLIN;
+		// 	mod->best_x = j;
+		// 	mod->best_pivot = x[*n_leaf + i + 1];
+		// 	mod->lm_l.con_par = par[0];
+		// 	mod->lm_l.lin_par = par[1];
+		// 	mod->lm_r.con_par = par[2];
+		// 	mod->lm_r.lin_par = par[3];
+		// 	mod->best_bic = bic;
+		// }
 	}
 }
 
@@ -642,41 +651,15 @@ double pilot_predict(tree_t const *T, double *x, int const *p) {
 		node *Tpt = T->T;
 		while(Tpt) {
 			tmpx = clamp(x[Tpt->mod.best_x], Tpt->mod.range[0], Tpt->mod.range[1]);
-			switch (Tpt->mod.best_model) {
-			case CON:
-				pred_add = Tpt->mod.lm_l.con_par;
-				pred = clamp(pred + pred_add, -3.0 * B, B * 3.0);
-				Tpt = Tpt->l;
-				break;
-			case LIN:
+			if (tmpx < Tpt->mod.best_pivot) {
 				pred_add = Tpt->mod.lm_l.con_par + Tpt->mod.lm_l.lin_par * tmpx;
 				pred = clamp(pred + pred_add, -3.0 * B, B * 3.0);
 				Tpt = Tpt->l;
-				break;
-			case PCON:
-				if (tmpx < Tpt->mod.best_pivot) {
-					pred_add = Tpt->mod.lm_l.con_par;
-					pred = clamp(pred + pred_add, -3.0 * B, B * 3.0);
-					Tpt = Tpt->l;
-				}
-				else {
-					pred_add = Tpt->mod.lm_r.con_par;
-					pred = clamp(pred + pred_add, -3.0 * B, B * 3.0);
-					Tpt = Tpt->r;
-				}
-				break;
-			default: /* case BLIN and PLIN */
-				if (tmpx < Tpt->mod.best_pivot) {
-					pred_add = Tpt->mod.lm_l.con_par + Tpt->mod.lm_l.lin_par * tmpx;
-					pred = clamp(pred + pred_add, -3.0 * B, B * 3.0);
-					Tpt = Tpt->l;
-				}
-				else {
-					pred_add = Tpt->mod.lm_r.con_par + Tpt->mod.lm_r.lin_par * tmpx;
-					pred = clamp(pred + pred_add, -3.0 * B, B * 3.0);
-					Tpt = Tpt->r;
-				}
-				break;
+			}
+			else {
+				pred_add = Tpt->mod.lm_r.con_par + Tpt->mod.lm_r.lin_par * tmpx;
+				pred = clamp(pred + pred_add, -3.0 * B, B * 3.0);
+				Tpt = Tpt->r;
 			}
 		}
 		pred += T->C;
