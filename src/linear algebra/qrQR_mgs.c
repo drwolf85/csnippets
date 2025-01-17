@@ -48,5 +48,4 @@ void qrQR_mgs(double *dta, int *dim, double *q, double *r) {
 // matrix(res$r, ncol(a), ncol(a))
 // array(res$q, dim=dim(a))%*%matrix(res$r, ncol(a), ncol(a))
 // system.time(qr.R(qr(a)))
-
-solve(matrix(res$r, ncol(a), ncol(a))) %*% t(array(res$q, dim=dim(a)))
+// solve(matrix(res$r, ncol(a), ncol(a))) %*% t(array(res$q, dim=dim(a)))
