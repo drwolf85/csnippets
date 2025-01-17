@@ -10,7 +10,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <omp.h>
 
 /* Model types */
 typedef enum Model_type { CON, /* CONstant. The recursion stops after fitting this model. */
@@ -56,8 +55,8 @@ typedef struct full_tree {
  */
 double clamp(double x, double lw, double up) {
     double res = x;
-    if (x > up) res = up;
-    if (x < lw) res = lw;
+    res += (double) (x > up) * (up - res);
+    res += (double) (x < lw) * (lw - res);
     return res;
 }
 
@@ -71,10 +70,9 @@ double clamp(double x, double lw, double up) {
 static inline void range(double *r, double *x, size_t n) {
 	double mx, mn;
 	mx = mn = x[0];
-	#pragma omp parallel for simd reduction(min : mn) reduction(max : mx)
 	for (size_t i = 1; i < n; i++) {
-		if (mx < x[i]) mx = x[i];
-		if (x[i] < mn) mn = x[i];
+		mx += (double) (mx < x[i]) * (x[i] - mx);
+		mn += (double) (x[i] < mn) * (x[i] - mn);
 	}
 	r[0] = mn;
 	r[1] = mx;
@@ -116,7 +114,6 @@ double * center(double *x, size_t n, double *B, double *C) {
     	range(rng, x, n);
         *B = 0.5 * (rng[1] - rng[0]);
         *C = 0.5 * (rng[1] + rng[0]);
-        #pragma omp parallel for simd
         for (i = 0; i < n; i++) y0[i] = x[i] - *C;
     }
     return y0;
@@ -130,10 +127,7 @@ double * center(double *x, size_t n, double *B, double *C) {
  */
 size_t * seq_len(size_t n) {
     size_t * ivec = (size_t *) calloc(n, sizeof(size_t));
-    if (ivec) {
-	#pragma omp parallel for simd
-        for (size_t i = 0; i < n; i++) ivec[i] = i;
-    }
+    if (ivec) for (size_t i = 0; i < n; i++) ivec[i] = i;
     return ivec;
 }
 
@@ -181,7 +175,6 @@ static void sort_reals_wid(double *x, size_t *idx, size_t n) {
     y = (double *) malloc(n * sizeof(double));
 
     if (s && y && sid && x && idx) {
-    	#pragma omp for simd
     	for (i = 0; i < n; i++) idx[i] = i;
         negcpy(s, x, n, 0);
         for (c = 0; c < sizeof(double); c++) {
@@ -351,8 +344,8 @@ void BIC_select(leaf_model *mod, size_t *ivec, size_t *idx, size_t n, double *x,
 	bic -= par[2] * sy[1];
 	bic *= 2.0;
 	bic += syy[0] + syy[1];
-	bic += par[0] * par[0] * (double) (i + 1);
-	bic += par[2] * par[2] * (double) (n - i - 1);
+	bic += par[0] * par[0] * (double) (*n_leaf);
+	bic += par[2] * par[2] * (double) (n - *n_leaf);
 	bic += sxx[0] * par[1] * par[1];
 	bic += sxx[1] * par[3] * par[3];
 	bic = (double) n * log(bic * ninv) + 7.0 * log((double) n); /* BIC_PLIN */
@@ -431,8 +424,8 @@ void BIC_select(leaf_model *mod, size_t *ivec, size_t *idx, size_t n, double *x,
 		bic -= par[2] * sy[1];
 		bic *= 2.0;
 		bic += syy[0] + syy[1];
-		bic += par[0] * par[0] * (double) (i + 1);
-		bic += par[2] * par[2] * (double) (n - i - 1);
+		bic += par[0] * par[0] * (double) (*n_leaf + i + 1);
+		bic += par[2] * par[2] * (double) (n - *n_leaf - i - 1);
 		bic += sxx[0] * par[1] * par[1];
 		bic += sxx[1] * par[3] * par[3];
 		bic = (double) n * log(bic * ninv) + 7.0 * log((double) n); /* BIC_PLIN */
@@ -583,19 +576,10 @@ node * tree_build(double *raw_pred, double *y, double *err, double *X, size_t co
 				}
 			}
 			ell = fix_ivec(ivec, n, T, X, idx, N);
-			#pragma omp parallel sections num_threads(2)
-			{
-				#pragma omp section 
-				{
-					qsort(ivec, ell, sizeof(size_t), cmp_ivec);
-					T->l = tree_build(raw_pred, y, err, X, ell, p, K, idx, ivec, k_max, n_fit, n_leaf, B, N);
-				}
-				#pragma omp section 
-				{
-					qsort(&ivec[ell], n - ell, sizeof(size_t), cmp_ivec);
-					T->r = tree_build(raw_pred, y, err, X, n - ell, p, K, idx, &ivec[ell], k_max, n_fit, n_leaf, B, N);
-				}
-			}
+			qsort(ivec, ell, sizeof(size_t), cmp_ivec);
+			qsort(&ivec[ell], n - ell, sizeof(size_t), cmp_ivec);
+			T->l = tree_build(raw_pred, y, err, X, ell, p, K, idx, ivec, k_max, n_fit, n_leaf, B, N);
+			T->r = tree_build(raw_pred, y, err, X, n - ell, p, K, idx, &ivec[ell], k_max, n_fit, n_leaf, B, N);
 		}
 	}
 	return T;
@@ -629,10 +613,7 @@ tree_t * pilot(double *y, double *X, int *dimX, int *Kmax, int *nFit, int *nLeaf
 		double *y0 = center(y, n, &tree->B, &tree->C);
 		if (y0) {
 			memcpy(err, y0, n * sizeof(double));
-			#pragma omp parallel for 
-			for (j = 0; j < p; j++) {
-				sort_reals_wid(&X[j * n], &idx[j * n], n);
-			}
+			for (j = 0; j < p; j++) sort_reals_wid(&X[j * n], &idx[j * n], n);
 			tree->T = tree_build(raw_pred, y0, err, X, n, &p, 0, idx, ivec, &k_max, &n_fit, &n_leaf, &tree->B, &n);
 		}
 		free(y0);
