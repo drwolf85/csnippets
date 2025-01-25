@@ -83,11 +83,11 @@ double nll_contrib(double *bc, double *br, double *ac, double *ar, /* Parameters
 	return -res;
 }
 
-static inline double grad_nll_contrib(double *gbc, double *gbr, double *gac, double *gar, /* Gradients to update */
+static inline void grad_nll_contrib(double *gbc, double *gbr, double *gac, double *gar, /* Gradients to update */
 			double *bc, double *br, double *ac, double *ar, /* Parameters */
                         uint8_t yc, double *xc, size_t dc, /* Data Ca. */
                         uint8_t yr, double *xr, size_t dr) { /* Data Reca. */
-        if (!(bc && br && ac && ar && xc && xr)) return nan("");
+        if (!(bc && br && ac && ar && xc && xr && gbc && gbr && gac && gar)) return;
 	double fc, pc = *ac;
 	double fr, pr = *ar;
 	double res = 0.0;
@@ -218,3 +218,4 @@ int main() {
 }
 
 #endif
+
