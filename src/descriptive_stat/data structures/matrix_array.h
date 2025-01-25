@@ -1,0 +1,29 @@
+#ifndef MATRIX_ARRAY_H
+#define MATRIX_ARRAY_H
+
+#define COLUMN_MAJOR 0
+#define ROW_MAJOR 1
+#define DIAGONAL 2
+#define ANTI_DIAGONAL 3
+#define SYMMETRIC_COL_MAJ_W_DIAG 4
+#define SYMMETRIC_COL_MAJ_WOUT_DIAG 5
+#define SYMMETRIC_ROW_MAJ_W_DIAG 6
+#define SYMMETRIC_ROW_MAJ_WOUT_DIAG 7
+#define LOWER_TRIANG_COL_MAJ_W_DIAG 8
+#define LOWER_TRIANG_COL_MAJ_WOUT_DIAG 9
+#define LOWER_TRIANG_ROW_MAJ_W_DIAG 10
+#define LOWER_TRIANG_ROW_MAJ_WOUT_DIAG 11
+#define UPPER_TRIANG_COL_MAJ_W_DIAG 12
+#define UPPER_TRIANG_COL_MAJ_WOUT_DIAG 13
+#define UPPER_TRIANG_ROW_MAJ_W_DIAG 14
+#define UPPER_TRIANG_ROW_MAJ_WOUT_DIAG 15
+
+typedef struct matrix_array {
+	double *m;
+	unsigned nr;
+	unsigned nc;
+	unsigned char type;
+} mat_arr;
+
+#endif
+
