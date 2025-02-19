@@ -172,47 +172,59 @@ static inline void resid(double *err, double *y, int *dimX, int cnt, double *tmx
 }
 
 /**
- * The function calculates the LASSO penalty of an array of parameters in parallel using OpenMP directives.
+ * The function calculates the Bayes Information Criterion using parallel processing and SIMD-vectorization
+ * instructions.
  * 
- * @param par A pointer to a structure type `param_t` with the values and memory locations of estimated parameters.
- * @param np The parameter `np` represents the number of non-zero elements in the array `par`.
+ * @param err The `err` parameter is an array of double values representing errors.
+ * @param dimX The `dimX` parameter is a pointer to an integer array that contains two elements. The
+ * first element `dimX[0]` represents the number of elements in the `err` and `y` arrays, while the
+ * second element `dimX[1]` represents the total number of variables.
+ * @param cnt The count of non-zero parameters or the degree of freedom of the fitted model. It is 
+ * used in the calculation of the Bayes Information Criterion (BIC) as a factor that penalizes the 
+ * model complexity based on the number of data points.
+ * @param step_sz A constant value used in the calculation of the Bayesian Information Criterion (BIC).
+ * It is a tuning parameter that influences the penalty term in the BIC formula.
  * 
- * @return The function `L1norm` is returning the LASSO penalty of the vector `par` with `np` non-zero elements.
+ * @return The function `BayesInfoCriterion` is returning a double value.
  */
-static inline double L1norm(param_t *par, int np) {
+static inline double BayesInfoCriterion(double *err, int *dimX, int cnt, double const step_sz) {
   double res = 0.0;
-  #pragma omp parallel for reduction(+ : res)
-  for (int i = 0; i < np; i++) {
-    res += fabs(par[i].v);
+  int i;
+  #pragma omp parallel for simd private(i) reduction(+ : res)
+  for (i = 0; i < dimX[0]; i++) {
+    res += err[i] * err[i];
   }
+  res /= (double) dimX[0];
+  // res += 0.5 * step_sz * (double) cnt * log((double) dimX[0]); /* According to Schwarz */
+  res = (double) dimX[0] * log(res) + step_sz * (double) cnt * log((double) dimX[0]); /* according to Raymaekers et al. (2023) */
   return res;
 }
 
 /**
- * The function `adaForSt` implements an adaptive forward stepwise (AFS) regression algorithm for variable
- * selection and parameter estimation.
+ * The function `adaForSt` implements an adaptive forward stepwise regression algorithm with BIC for early stopping rule.
  * 
- * @param card_AS A pointer to an integer that is used to store the number of variables in the active set. 
- * This value represents the count of active set variables that are selected during the AFS algorithm.
- * @param y An array of double values that contains the response variable values used in the computation.
- * @param X A pointer to a double, which represents a matrix of predictors. The matrix `X` is used in 
- * various calculations within the function, such as computing gradients, residuals, and performing matrix 
- * operations like transposition and QR decomposition.
+ * @param card_AS The `card_AS` parameter in the function `adaForSt` is a pointer to an integer that
+ * will be used to store the number of variables in the active set after the function completes its
+ * execution. This value represents the cardinality of the active set of variables selected by the
+ * algorithm.
+ * @param y The `y` parameter in the function `adaForSt` represents an array of double values that
+ * contains the response variable values for the regression problem.
+ * @param X The parameter `X` in the provided function `adaForSt` is a pointer to a double array
+ * representing the input data matrix. It is used for various calculations within the function, such as
+ * computing gradients, residuals, and performing matrix operations like transposition and
+ * orthogonalization.
  * @param dimX The `dimX` parameter represents the dimensions of the input matrix `X`. It is an array
  * containing two integers: `dimX[0]` represents the number of rows in `X`, and `dimX[1]` represents
  * the number of columns in `X`.
- * @param h The parameter `h` in the provided function `adaForSt` represents a threshold value used in
- * the AFS algorithm. This threshold is used as a stopping criterion
- * in the algorithm to determine when to halt the iterative process.
  * @param M The parameter `M` represents the maximum number of iterations for the AFS algorithm. 
  * It is used to control the number of iterations the algorithm will perform before terminating.
  * @param step_sz The `step_sz` parameter in the provided function `adaForSt` represents the step size
  * used in updating the model coefficients during the AFS algorithm. It controls the amount by which 
  * the model coefficients are adjusted in each iteration of the algorithm.
  * 
- * @return The function `adaForSt` is returning a pointer to a `param_t` structure.
+ * @return The function `adaForSt` returns a pointer to a `param_t` structure.
  */
-extern param_t * adaForSt(int *card_AS, double *y, double *X, int *dimX, double h, size_t M, double const step_sz) {
+extern param_t * adaForSt(int *card_AS, double *y, double *X, int *dimX, size_t M, double const step_sz) {
   param_t *par = NULL;
   int mnp, cnt = 0;
   double *grd = NULL;
@@ -223,7 +235,8 @@ extern param_t * adaForSt(int *card_AS, double *y, double *X, int *dimX, double 
   size_t m, i, j, k;
   double *q, *r;
   double mxgr, tmp;
-  double pen = 0.0;
+  double oBIC = INFINITY;
+  double nBIC = 0.0;
 
   if (y && X && dimX && M > 0 && step_sz > 0.0 && step_sz <= 1.0) {
     mnp = dimX[0] < dimX[1] ? dimX[0] : dimX[1];
@@ -254,9 +267,16 @@ extern param_t * adaForSt(int *card_AS, double *y, double *X, int *dimX, double 
 
       /* Compute residuals */
       resid(err, y, dimX, cnt, tmx, par);
+
+      /*  BIC for early stopping rule */
+      nBIC = BayesInfoCriterion(err, dimX, cnt, step_sz);
     
       /* Sequential loop for Adaptive ForSt */
-      for (m = 0; m < (size_t) M && cnt < mnp && pen < h; m++) {
+      for (m = 0; m < (size_t) M && cnt < mnp && nBIC < oBIC; m++) {
+        oBIC = nBIC;
+        // #ifdef DEBUG
+        // printf("BIC: %g\n", oBIC);
+        // #endif
         /* Gradient */
         #pragma omp parallel for private(j, i)
         for (j = 0; j < dimX[1]; j++) {
@@ -330,8 +350,8 @@ extern param_t * adaForSt(int *card_AS, double *y, double *X, int *dimX, double 
         /* Compute residuals */ 
         resid(err, y, dimX, cnt, tmx, par);
 
-        /* Determine early stopping rule */
-        pen = L1norm(par, cnt);
+        /* BIC for early stopping rule */
+        nBIC = BayesInfoCriterion(err, dimX, cnt, step_sz);
       }
     }
     #ifdef DEBUG
@@ -356,7 +376,6 @@ extern param_t * adaForSt(int *card_AS, double *y, double *X, int *dimX, double 
 }
 
 #ifdef DEBUG
-#define MY_LASSO_NORM 3.0
 #define MY_M_ITERATION_VALUE 500
 #define MY_STEP_SISE_VALUE 0.05
 int main() {
@@ -364,10 +383,9 @@ int main() {
   int x_dim[] = {6, 10}; /* True active set has cardinality three */
   double y[] = {0.403424, -0.515348, -2.074205, 2.094899, 2.617164, 0.246223, 0.0, 0.0, 0.0, 0.0};
   int active_set = 0;
-  /* Here you are supposed to run the LASSO to get the value for the `h` argument below */
-  param_t *beta_hat = adaForSt(&active_set, y, x_mat, x_dim, MY_LASSO_NORM, MY_M_ITERATION_VALUE, MY_STEP_SISE_VALUE);
+  param_t *beta_hat = adaForSt(&active_set, y, x_mat, x_dim, MY_M_ITERATION_VALUE, MY_STEP_SISE_VALUE);
   if (beta_hat) {
-    printf("Adaptive Selection Forward Regression (h = %g, M = %d, ada_step = %g):\n", MY_LASSO_NORM, MY_M_ITERATION_VALUE, MY_STEP_SISE_VALUE);
+    printf("Adaptive Selection Forward Regression (M = %d, ada_step = %g):\n", MY_M_ITERATION_VALUE, MY_STEP_SISE_VALUE);
     for (int i = 0; i < active_set && i < 10; i++) {
       printf("(estim %d of variab %d) %g\n", i, beta_hat[i].i, beta_hat[i].v);
     }
