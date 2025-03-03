@@ -39,9 +39,9 @@ static inline void proximal_operator(double *res, double *v, double *mom_m,
                                      void *info, int maxit, double step_sz) {
 	int i, t;
 	double sgn;
+	memset(mom_m, 0, sizeof(double) * n);
 	for (t = 0; t < maxit; t++) {
 		/* Update the gradient */
-		memset(mom_m, 0, sizeof(double) * n);
 		get_grad(grd_v, n, res, v, lambda, g, info, step_sz);
 		for (i = 0; i < n; i++) {
 			/* Lion update of custom momentum */
@@ -54,6 +54,7 @@ static inline void proximal_operator(double *res, double *v, double *mom_m,
 			/* Computing the step */
 			grd_v[i] = sgn + FACTOR_P * res[i];
 			grd_v[i] *= LEARNING_RATE;
+			grd_v[i] = fmin(grd_v[i] + lambda, 0.0) + fmax(grd_v[i] - lambda, 0.0);
 			res[i] -= grd_v[i];
 		}
 	}
@@ -75,12 +76,10 @@ void proximal_grad(double *x, int n, double step_sz, double lambda, double alpha
 			for (i = 0; i < n; i++)
 				v[i] = x[i] - alpha * grd[i];
 			proximal_operator(x, v, mom2, n, grd2, lambda, g, info, maxop, step_sz);
-			test = 0.0;
-			for (i = 0; i < n; i++) {
-				v[i] = x[i] - (v[i] + alpha * grd[i]);
-				test += v[i];
+			test = fabs(x[0] - v[0]);
+			for (i = 1; i < n; i++) {
+				test += fabs(x[i] - v[i]);
 			}
-			test = fabs(sqrt(fabs(test)));
 		}
 	}
 	if (v) free(v);
@@ -115,7 +114,8 @@ void my_f_grad(double *grad_f, double *par, int p, void *info) {
 double my_g(double *par, int p, void *info) {
 	double res = 0.0;
 	int i;
-	for (i = 1; i < p; i++) {
+	info_t nf = *(info_t *) info;
+	if (nf.p < p) for (i = 1; i < p; i++) {
 		res += fabs(par[i]);
 	}
 	return res;
@@ -126,9 +126,9 @@ int main() {
 	int const P = 2;
 	double x[] = {0.57, -0.15, 1.4, -0.5, 0.52, -0.68, -1.79, -0.13, 0.06, 0.67, 0.1, 0.92, 0.04, -0.46, 0.81, -0.84, -2.14, -0.55, 0.95, 0.28, 0.31, 0.43, 1.63, -0.12, 0.94, 1.28, -0.88, -0.83, -2.11, -1.05, -0.06, -0.19, -0.01, 1.07, -1.38, -1.8, -0.41, -1.78, 1.28, -0.88};
 	double y[] = {0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
-	double par[3] = {0.0, -3.2, 3.2};
+	double par[3] = {0};
 	info_t info = {y, x, N, P};
-	proximal_grad(par, 3, 1e-3, 100.0, 1e-3, my_f_grad, my_g, (void *) &info, 1000L, 5L);
+	proximal_grad(par, 3, 1e-3, 2.5e-4, 1e-3, my_f_grad, my_g, (void *) &info, 2000L, 200L);
 	printf("Final param: ");
 	for (int i = 0; i < 3; i++) printf("%g ", par[i]);
 	printf("\n");
