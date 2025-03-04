@@ -83,7 +83,6 @@ struct data_grad {
 void obj_grad(double *g, double *B, int *p2, void *info) {
     struct data_grad * mat = (struct data_grad *) info;
     int i, j, k, pos;
-    double res = 0.0;
     double tmp;
     double *smat = (double *) calloc(mat->p * mat->n, sizeof(double));
     if ((mat->t + 1) % 1000 == 0) printf("Objective: %g\n", obj(B, mat->p, mat->y, mat->n));
@@ -119,16 +118,16 @@ void obj_grad(double *g, double *B, int *p2, void *info) {
     }
 }
 
-int main() {
+int main(void) {
     double B[25] = {0};
     double y[] = {-0.1315819, 0.1793963, -0.01755624, 0.3562621, 0.4973845, 0.2482045, 0.4099135, 0.2161882, -0.4980195, -0.2372604, 0.230425, -0.1300743, 0.8188969, -0.01759944, 0.2121086, 0.8206889, 0.3538281, 0.5556703, 0.2935429, 0.3055268, -0.2001838, -0.6887512, -0.6138871, -0.7589452, -0.3999022, 0.3259763, 0.9863215, 0.1321867, 1.363693, 0.7105176, -0.4082712, -0.7169683, -0.6221118, -0.764756, -0.3655938, -0.6868594, -0.1536153, -1.051096, -0.3658161, -1.200048, -1.50248, -1.335725, -1.717085, 0.1390045, -0.9140004, -1.488441, -1.692978, -1.967536, -1.009726, -0.6429252};
-    struct data_grad myinfo = {n: 10, p: 5, y: y, t: 0};
+    struct data_grad myinfo = {.n = 10, .p = 5, .y = y, .t = 0};
     int max_it = 5000;
     int par_len = 25;
     int i;
     lion(B, &par_len, &max_it, &myinfo, obj_grad);
     for (i = 0; i < par_len; i++)
-        printf("%s%.8f%s", B[i], B[i] < 0.0 ? "" : " ", (i + 1) % 5 == 0 ? "\n" : " ");
+        printf("%s%.8f%s", B[i] < 0.0 ? "" : " ", B[i], (i + 1) % 5 == 0 ? "\n" : " ");
     return 0;
 }
 #endif

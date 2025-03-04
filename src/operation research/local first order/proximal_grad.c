@@ -128,7 +128,7 @@ int main() {
 	double y[] = {0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
 	double par[3] = {0};
 	info_t info = {y, x, N, P};
-	proximal_grad(par, 3, 1e-3, 2.5e-4, 1e-3, my_f_grad, my_g, (void *) &info, 2000L, 200L);
+	proximal_grad(par, 3, 1e-3, 9.5e-5, 1e-3, my_f_grad, my_g, (void *) &info, 2000L, 200L);
 	printf("Final param: ");
 	for (int i = 0; i < 3; i++) printf("%g ", par[i]);
 	printf("\n");
