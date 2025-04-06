@@ -582,9 +582,8 @@ node * tree_build(double *raw_pred, double *y, double *err, double *X,
 				}
 			}
 			#endif
-			return T;
 		}
-		if (T->mod.best_model == LIN) {
+		else if (T->mod.best_model == LIN) {
 			for (i = 0; i < n; i++) { /* Predictions of the linear model */
 				ell = ivec[i];
 				x = X[*N * T->mod.best_x + ell];

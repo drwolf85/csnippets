@@ -72,72 +72,78 @@ static void free_trees(tree_t *tree, size_t ntrees) {
 
 static void model_select(leaf_model *mod, int *idx, datum *data, int n, int *nr, int const *n_fit, int const *n_leaf) {
 	int i, j, tmp, nl;
-	double sx[2] = {0};
 	double *sy;
-	double sxx[2] = {0};
-	double *sxy;
 	double *syy;
 	double ninv[3] = {0};
-	double bic;
+	double *pala, *para;
+	double bic, cib;
 	*nr = 0;
 	mod->best_x = (size_t) (rand() % data->dx);
 	mod->best_pivot = data[rand() % n].x[mod->best_x];
 
 	mod->lm_l.con_par = (double *) calloc(data->dy, sizeof(double));
 	mod->lm_r.con_par = (double *) calloc(data->dy, sizeof(double));
+
+	para = (double *) calloc(data->dy, sizeof(double));
+	pala = (double *) calloc(data->dy, sizeof(double));
+	
 	sy = (double *) calloc(2 * data->dy, sizeof(double));
-	sxy = (double *) calloc(2 * data->dy, sizeof(double));
 	syy = (double *) calloc(2 * data->dy, sizeof(double));
 
-	/* Compute sufficient statistics */
-	for (i = 0; i < n; i++) {
-		tmp = (int) (data[idx[i]].x[mod->best_x] >= mod->best_pivot);
-		*nr += tmp;
-		sx[tmp]  += data[idx[i]].x[mod->best_x];
-		sxx[tmp] += data[idx[i]].x[mod->best_x] * data[idx[i]].x[mod->best_x];
-		for (j = 0; j < data->dy; j++) {
-			sy[tmp * data->dy + j]  += data[idx[i]].y[j];
-			sxy[tmp * data->dy + j] += data[idx[i]].y[j] * data[idx[i]].x[mod->best_x];
-			syy[tmp * data->dy + j] += data[idx[i]].y[j] * data[idx[i]].y[j];
+	if (sy && syy && para && pala && mod->lm_l.con_par && mod->lm_r.con_par) {
+		/* Compute sufficient statistics */
+		for (i = 0; i < n; i++) {
+			tmp = (int) (data[idx[i]].x[mod->best_x] >= mod->best_pivot);
+			*nr += tmp;
+			for (j = 0; j < data->dy; j++) {
+				sy[tmp * data->dy + j]  += data[idx[i]].y[j];
+				syy[tmp * data->dy + j] += data[idx[i]].y[j] * data[idx[i]].y[j];
+			}
 		}
-	}
-	nl = n - *nr;
-	ninv[0] = 1.0 / (double) (n);
-	ninv[1] = 1.0 / (double) (*nr);
-	ninv[2] = 1.0 / (double) (nl);
+		nl = n - *nr;
+		ninv[0] = 1.0 / (double) (n);
+		ninv[1] = 1.0 / (double) (*nr);
+		ninv[2] = 1.0 / (double) (nl);
 
-	/* CON */
-	bic = 0.0;
-	for (j = 0; j < data->dy; j++) {
-		mod->lm_l.con_par[j] = ninv[0] * (sy[j] + sy[data->dy + j]);
-		mod->lm_r.con_par[j] = mod->lm_l.con_par[j];
-		bic += (double) n * log((syy[j] + syy[data->dy + j]) * ninv[0] - mod->lm_l.con_par[j] * mod->lm_l.con_par[j]);
-	}
-	bic += (double) data->dy * log((double) n); /* BIC_CON */
-	if (bic < mod->best_bic) {
-		mod->best_bic = bic;
-		mod->best_model = CON;
-	}
-	/* Random Branching */
-	if (*nr >= *n_fit && n - *nr >= *n_fit) {
-		/* PCON */
+		/* CON */
 		bic = 0.0;
 		for (j = 0; j < data->dy; j++) {
-			mod->lm_l.con_par[j] = sy[j] * ninv[2];
-			mod->lm_r.con_par[j] = sy[data->dy + j] * ninv[1];
-			bic += syy[j] * ninv[2] - mod->lm_l.con_par[j] * mod->lm_l.con_par[j];
-			bic += syy[data->dy + j] * ninv[1] - mod->lm_r.con_par[j] * mod->lm_r.con_par[j];
+			pala[j] = ninv[0] * (sy[j] + sy[data->dy + j]);
+			cib = (double) n * log((syy[j] + syy[data->dy + j]) * ninv[0] - pala[j] * pala[j]);
+			cib += log((double) n);
+			bic += cib; /* BIC_CON */
 		}
-		bic = (double) n * log(bic) + 5.0 * log((double) n);
-		bic *= (double) data->dy; /* BIC_PCON */
 		if (bic < mod->best_bic) {
 			mod->best_bic = bic;
-			mod->best_model = PCON;
+			mod->best_model = CON;
+			memcpy(mod->lm_l.con_par, pala, data->dy * sizeof(double));
+			memcpy(mod->lm_r.con_par, pala, data->dy * sizeof(double));
+		}
+		/* Random Branching */
+		if (*nr >= *n_fit && n - *nr >= *n_fit) {
+			/* PCON */
+			bic = 0.0;
+			for (j = 0; j < data->dy; j++) {
+				pala[j] = sy[j] * ninv[2];
+				para[j] = sy[data->dy + j] * ninv[1];
+				cib = syy[j] * ninv[2] - pala[j] * pala[j];
+				cib += syy[data->dy + j] * ninv[1] - para[j] * para[j];
+				cib = (double) n * log(cib) + 5.0 * log((double) n); /* BIC_PCON */
+				bic += cib;
+			}
+			if (bic < mod->best_bic) {
+				mod->best_bic = bic;
+				mod->best_model = PCON;
+				memcpy(mod->lm_l.con_par, pala, data->dy * sizeof(double));
+				memcpy(mod->lm_r.con_par, para, data->dy * sizeof(double));
+			}
 		}
 	}
+
 	myfree(sy);
-	myfree(sxy);
 	myfree(syy);
+	myfree(para);
+	myfree(pala);
 }
 
 static void separate_idx(int *idx, int n, int nl, int nr, datum *data, leaf_model *mod) {
