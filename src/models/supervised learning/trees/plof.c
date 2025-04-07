@@ -1,5 +1,5 @@
 /**
- * @brief Random Organic Forest (ROF)
+ * @brief Fast Boosted Linear Random Trees by Piecewise Linear Organic Forest (PLOF)
  */
 #include <stdio.h>
 #include <time.h>
@@ -22,11 +22,14 @@ typedef struct datum {
 
 /* Model types */
 typedef enum Model_type { CON, /* CONstant. The recursion stops after fitting this model. */
-  PCON /* Piecewise CONstant fit, as in CART. */
-} model_t;
+  LIN, /* LINear regression (the standard one). */
+  PCON, /* Piecewise CONstant fit, as in CART. */
+  BLIN, /* Broken LINear: a continuous curve based on two linear models. */
+  PLIN } model_t; /* Piecewise LINear fit that can be discontinuous. */
 
 typedef struct parameters {
     double *con_par; /* Constant predictor (or model intercept) */
+    double *lin_par; /* Linear coefficient */
 } param_t;
 
 typedef struct leaf_model {
@@ -56,7 +59,9 @@ static void free_node(node *nd) {
     if (nd->l) free_node(nd->l);
     if (nd->r) free_node(nd->r);
     myfree(nd->mod.lm_l.con_par);
+    myfree(nd->mod.lm_l.lin_par);
     myfree(nd->mod.lm_r.con_par);
+    myfree(nd->mod.lm_r.lin_par);
     myfree(nd);
 }
 
@@ -72,31 +77,41 @@ static void free_trees(tree_t *tree, size_t ntrees) {
 
 static void model_select(leaf_model *mod, int *idx, datum *data, int n, int *nr, int const *n_fit, int const *n_leaf) {
 	int i, j, tmp, nl;
+	double sx[2] = {0};
 	double *sy;
+	double sxx[2] = {0};
+	double *sxy;
 	double *syy;
 	double ninv[3] = {0};
-	double *pala, *para;
+	double *pala, *palb, *para, *parb;
 	double bic, cib;
 	*nr = 0;
 	mod->best_x = (size_t) (rand() % data->dx);
 	mod->best_pivot = data[rand() % n].x[mod->best_x];
 
 	mod->lm_l.con_par = (double *) calloc(data->dy, sizeof(double));
+	mod->lm_l.lin_par = (double *) calloc(data->dy, sizeof(double));
 	mod->lm_r.con_par = (double *) calloc(data->dy, sizeof(double));
-
+	mod->lm_r.lin_par = (double *) calloc(data->dy, sizeof(double));
 	para = (double *) calloc(data->dy, sizeof(double));
+	parb = (double *) calloc(data->dy, sizeof(double));
 	pala = (double *) calloc(data->dy, sizeof(double));
-	
+	palb = (double *) calloc(data->dy, sizeof(double));
 	sy = (double *) calloc(2 * data->dy, sizeof(double));
+	sxy = (double *) calloc(2 * data->dy, sizeof(double));
 	syy = (double *) calloc(2 * data->dy, sizeof(double));
 
-	if (sy && syy && para && pala && mod->lm_l.con_par && mod->lm_r.con_par) {
+	if (sy && sxy && syy && para && parb && pala && palb && \
+	    mod->lm_l.con_par && mod->lm_l.lin_par && mod->lm_r.con_par && mod->lm_r.lin_par) {
 		/* Compute sufficient statistics */
 		for (i = 0; i < n; i++) {
 			tmp = (int) (data[idx[i]].x[mod->best_x] >= mod->best_pivot);
 			*nr += tmp;
+			sx[tmp]  += data[idx[i]].x[mod->best_x];
+			sxx[tmp] += data[idx[i]].x[mod->best_x] * data[idx[i]].x[mod->best_x];
 			for (j = 0; j < data->dy; j++) {
 				sy[tmp * data->dy + j]  += data[idx[i]].y[j];
+				sxy[tmp * data->dy + j] += data[idx[i]].y[j] * data[idx[i]].x[mod->best_x];
 				syy[tmp * data->dy + j] += data[idx[i]].y[j] * data[idx[i]].y[j];
 			}
 		}
@@ -118,6 +133,31 @@ static void model_select(leaf_model *mod, int *idx, datum *data, int n, int *nr,
 			mod->best_model = CON;
 			memcpy(mod->lm_l.con_par, pala, data->dy * sizeof(double));
 			memcpy(mod->lm_r.con_par, pala, data->dy * sizeof(double));
+			memset(mod->lm_l.lin_par, 0, data->dy * sizeof(double));
+			memset(mod->lm_r.lin_par, 0, data->dy * sizeof(double));
+		}
+		/* LIN */
+		bic = 0.0;
+		for (j = 0; j < data->dy; j++) {
+			para[j] = ninv[0] * (sy[j] + sy[data->dy + j]);
+			pala[j] = sx[0] + sx[1];
+			palb[j] = (sxy[j] + sxy[data->dy + j] - pala[j] * para[j]) / (sxx[0] + sxx[1] - pala[j] * pala[j] * ninv[0]);
+			pala[j] = para[j] - palb[j] * pala[j] * ninv[0];
+			cib = syy[j] + syy[data->dy + j] + pala[j] * pala[j] * (double) n;
+			cib += (sxx[0] + sxx[1]) * palb[j] * palb[j];
+			cib -= 2.0 * (pala[j] * (sy[j] + sy[data->dy + j]) + \
+			              palb[j] * (sxy[j] + sxy[data->dy + j]) - \
+			              pala[j] * palb[j] * (sx[0] + sx[1]));
+			cib = (double) n * log(cib * ninv[0]) + 2.0 * log((double) n); /* BIC_LIN */
+			bic += cib;
+		}
+		if (bic < mod->best_bic) {
+			mod->best_bic = bic;
+			mod->best_model = CON;
+			memcpy(mod->lm_l.con_par, pala, data->dy * sizeof(double));
+			memcpy(mod->lm_l.lin_par, palb, data->dy * sizeof(double));
+			memcpy(mod->lm_r.con_par, pala, data->dy * sizeof(double));
+			memcpy(mod->lm_r.lin_par, palb, data->dy * sizeof(double));
 		}
 		/* Random Branching */
 		if (*nr >= *n_fit && n - *nr >= *n_fit) {
@@ -136,14 +176,75 @@ static void model_select(leaf_model *mod, int *idx, datum *data, int n, int *nr,
 				mod->best_model = PCON;
 				memcpy(mod->lm_l.con_par, pala, data->dy * sizeof(double));
 				memcpy(mod->lm_r.con_par, para, data->dy * sizeof(double));
+				memset(mod->lm_l.lin_par, 0, data->dy * sizeof(double));
+				memset(mod->lm_r.lin_par, 0, data->dy * sizeof(double));
+			}
+			/* BLIN (broken linear) */
+			bic = 0.0;
+			for (j = 0; j < data->dy; j++) {
+				palb[j] = (sxy[j] - sx[0] * sy[j] * ninv[2]) / (sxx[0] - sx[0] * sx[0] * ninv[2]);
+				para[j] = (sxy[data->dy + j] - sx[1] * sy[data->dy + j] * ninv[1]) / (sxx[1] - sx[1] * sx[1] * ninv[1]);
+				pala[j] = ninv[0] * (sy[j] + sy[data->dy + j]) - palb[j] * sx[0] * ninv[2] - para[j] * sx[1] * ninv[1];
+				cib  = pala[j] * palb[j] * sx[0];
+				cib += pala[j] * para[j] * sx[1];
+				cib -= palb[j] * sxy[j];
+				cib -= para[j] * sxy[data->dy + j];
+				cib -= pala[j] * (sy[j] + sy[data->dy + j]);
+				cib *= 2.0;
+				cib += syy[j] + syy[data->dy + j] + pala[j] * pala[j] * (double) n;
+				cib += sxx[0] * palb[j] * palb[j];
+				cib += sxx[1] * para[j] * para[j];
+				cib = (double) n * log(cib * ninv[0]) + 5.0 * log((double) n); /* BIC_BLIN */
+				bic += cib;
+			}
+			if (bic < mod->best_bic) {
+				mod->best_bic = bic;
+				mod->best_model = BLIN;
+				memcpy(mod->lm_l.con_par, pala, data->dy * sizeof(double));
+				memcpy(mod->lm_l.lin_par, palb, data->dy * sizeof(double));
+				memcpy(mod->lm_r.con_par, pala, data->dy * sizeof(double));
+				memcpy(mod->lm_r.lin_par, para, data->dy * sizeof(double));
+
+			}
+			/* PLIN (piecewise linear) */
+			bic = 0.0;
+			for (j = 0; j < data->dy; j++) {
+				parb[j] = para[j];
+				pala[j] = (sy[j] - palb[j] * sx[0]) * ninv[2];
+				para[j] = (sy[data->dy + j] - parb[j] * sx[1]) * ninv[1];
+				cib  = pala[j] * palb[j] * sx[0];
+				cib += para[j] * parb[j] * sx[1];
+				cib -= palb[j] * sxy[j];
+				cib -= parb[j] * sxy[data->dy + j];
+				cib -= pala[j] * sy[j];
+				cib -= para[j] * sy[data->dy + j];
+				cib *= 2.0;
+				cib += syy[j] + syy[data->dy + j];
+				cib += pala[j] * pala[j] * (double) (nl);
+				cib += para[j] * para[j] * (double) (*nr);
+				cib += sxx[0] * palb[j] * palb[j];
+				cib += sxx[1] * parb[j] * parb[j];
+				cib = (double) n * log(cib * ninv[0]) + 7.0 * log((double) n); /* BIC_PLIN */
+				bic += cib;
+			}
+			if (bic < mod->best_bic) {
+				mod->best_bic = bic;
+				mod->best_model = PLIN;
+				memcpy(mod->lm_l.con_par, pala, data->dy * sizeof(double));
+				memcpy(mod->lm_l.lin_par, palb, data->dy * sizeof(double));
+				memcpy(mod->lm_r.con_par, para, data->dy * sizeof(double));
+				memcpy(mod->lm_r.lin_par, parb, data->dy * sizeof(double));
 			}
 		}
 	}
 
 	myfree(sy);
+	myfree(sxy);
 	myfree(syy);
 	myfree(para);
+	myfree(parb);
 	myfree(pala);
+	myfree(palb);
 }
 
 static void separate_idx(int *idx, int n, int nl, int nr, datum *data, leaf_model *mod) {
@@ -173,19 +274,51 @@ static node * fit_rnd_tree(tree_t const *T, int *idx, double *Y0, datum *data, i
 		model_select(&L->mod, idx, data, n, &nr, n_fit, n_leaf);
 		nl = n - nr;
 		if (L->mod.best_model == CON) {
-			return L;
+			#ifdef DEBUG
+			for (i = 0; i < n; i++) { /* Predictions of the constant model */
+				for (j = 0; j < data->dy; j++) {
+					pred = L->mod.lm_l.con_par[j];
+					/* Boosting step */
+					if (clamping) {
+						pred = Y0[data->dy * idx[i] + j] - data[idx[i]].y[j] + pred;
+						data[idx[i]].y[j] = Y0[data->dy * idx[i] + j] - \
+						                    fmax(-1.5 * T->B[j], fmin(pred, 1.5 * T->B[j]));
+					}
+					else {
+						data[idx[i]].y[j] -= pred;
+					}
+				}
+			}
+			#endif
+		}
+		else if (L->mod.best_model == LIN) {
+			for (i = 0; i < n; i++) { /* Predictions of the linear model */
+				for (j = 0; j < data->dy; j++) {
+					pred = data[idx[i]].x[L->mod.best_x];
+					pred = L->mod.lm_l.con_par[j] + L->mod.lm_l.lin_par[j] * pred;
+					/* Boosting step */
+					if (clamping) {
+						pred = Y0[data->dy * idx[i] + j] - data[idx[i]].y[j] + pred;
+						data[idx[i]].y[j] = Y0[data->dy * idx[i] + j] - \
+						                    fmax(-1.5 * T->B[j], fmin(pred, 1.5 * T->B[j]));
+					}
+					else {
+						data[idx[i]].y[j] -= pred;
+					}
+				}
+			}
+			L->l = fit_rnd_tree(T, idx, Y0, data, n, K, k_max, n_fit, n_leaf, clamping);
 		}
 		else { /* Update training dataset */
 			K++;
-			/* Residual update (boosting step) */
 			for (i = 0; i < n; i++) {
 				for (j = 0; j < data->dy; j++) {
 					pred = data[idx[i]].x[L->mod.best_x];
 					pred = (double)(pred < L->mod.best_pivot) * \
-					       (L->mod.lm_l.con_par[j]) + \
+					       (L->mod.lm_l.con_par[j] + L->mod.lm_l.lin_par[j] * pred) + \
 					       (double)(pred >= L->mod.best_pivot) * \
-					       (L->mod.lm_r.con_par[j]);
-
+					       (L->mod.lm_r.con_par[j] + L->mod.lm_r.lin_par[j] * pred);
+					/* Boosting step */
 					if (clamping) {
 						pred = Y0[data->dy * idx[i] + j] - data[idx[i]].y[j] + pred;
 						data[idx[i]].y[j] = Y0[data->dy * idx[i] + j] - \
@@ -204,15 +337,14 @@ static node * fit_rnd_tree(tree_t const *T, int *idx, double *Y0, datum *data, i
 	return L;
 }
 
-tree_t * rof_fit(double const *Y, int *dimY, double const *X, int *dimX, 
-                 int n_trees, int *Kmax, int const *nFit, int const *nLeaf,
-                 bool const clamping) {
+tree_t * plof_fit(double const *Y, int *dimY, double const *X, int *dimX, int const n_trees, 
+                  int *Kmax, int const *nFit, int const *nLeaf, bool const clamping) {
 	int i, j;
 	tree_t *forest = NULL;
 	datum *data;
 
 	if (*dimY != *dimX) return forest;
-
+		
 	int *idx = (int *) calloc(*dimX, sizeof(int));
 	double *Yt = (double *) calloc(dimY[0] * dimY[1], sizeof(double));
 	double *Y0 = (double *) calloc(dimY[0] * dimY[1], sizeof(double));
@@ -223,7 +355,7 @@ tree_t * rof_fit(double const *Y, int *dimY, double const *X, int *dimX,
 	double *Xc = (double *) calloc(dimX[1], sizeof(double));
 	data = (datum *) calloc(*dimX, sizeof(datum));
 	forest = (tree_t *) calloc(n_trees, sizeof(tree_t));
-
+	
 	if (forest && idx && Y0 && Yt && Xt && Yb && Xb && Yc && Xc && data) {
 		/* Transpose and get min and max of each variable */
 		for (j = 0; j < dimY[1]; j++) Yt[j] = Y[*dimY * j];
@@ -278,7 +410,7 @@ tree_t * rof_fit(double const *Y, int *dimY, double const *X, int *dimX,
 			memcpy(Yt, Y0, dimY[0] * dimY[1] * sizeof(double));
 		}
 	}
-
+	
 	myfree(idx);
 	myfree(Xt);
 	myfree(Yt);
@@ -288,9 +420,9 @@ tree_t * rof_fit(double const *Y, int *dimY, double const *X, int *dimX,
 	return forest;
 }
 
-void rof_predict(double *y, int const dy, 
-                 tree_t const *F, int const n_trees, 
-                 double const *x, int const dx, bool const clamping) {
+void plof_predict(double *y, int const dy, 
+                  tree_t const *F, int const n_trees, 
+                  double const *x, int const dx, bool const clamping) {
 	int i, j;
 	double tmpx;
 	double pred_add;
@@ -307,7 +439,7 @@ void rof_predict(double *y, int const dy,
 				tmpx = xvec[Tpt->mod.best_x];
 				if (tmpx < Tpt->mod.best_pivot) {
 					for (j = 0; j < dy; j++) {
-						pred_add = Tpt->mod.lm_l.con_par[j];
+						pred_add = Tpt->mod.lm_l.con_par[j] + Tpt->mod.lm_l.lin_par[j] * tmpx;
 						pred[j] += pred_add;
 						if (clamping) pred[j] = fmax(-1.5 * F->B[j], fmin(pred[j], 1.5 * F->B[j]));
 					}
@@ -315,7 +447,7 @@ void rof_predict(double *y, int const dy,
 				}
 				else {
 					for (j = 0; j < dy; j++) {
-						pred_add = Tpt->mod.lm_r.con_par[j];
+						pred_add = Tpt->mod.lm_r.con_par[j] + Tpt->mod.lm_r.lin_par[j] * tmpx;
 						pred[j] += pred_add;
 						if (clamping) pred[j] = fmax(-1.5 * F->B[j], fmin(pred[j], 1.5 * F->B[j]));
 					}
@@ -351,18 +483,18 @@ int main() {
 
 	srand(time(NULL));
 
-	printf("# Testing ROF model (at max depth %d)\n", Kmax);
+	printf("# Testing PLOF model (at max depth %d)\n", Kmax);
 	printf("# ---\n");
 
-	tree_t *myROF = rof_fit(y, dimY, x, dimX, NTREES, &Kmax, &nFit, &nLeaf, MYCLAMP);
-	if (myROF) {
+	tree_t *myPLOF = plof_fit(y, dimY, x, dimX, NTREES, &Kmax, &nFit, &nLeaf, MYCLAMP);
+	if (myPLOF) {
 		printf("err <- c(");
 		for (i = 0; i < nobs - 1; i++) {
 			obs = y[i];
 			for (j = 0; j < nvar; j++) {
 				xtest[j] = x[nobs * j + i];
 			}
-			rof_predict(&pred, 1, myROF, NTREES, xtest, dimX[1], MYCLAMP);
+			plof_predict(&pred, 1, myPLOF, NTREES, xtest, dimX[1], MYCLAMP);
 			/* printf("\tObserved: %g\n", obs);
 			printf("\tPredicted: %g\n", pred);
 			printf("---\n");
@@ -373,11 +505,11 @@ int main() {
 		for (j = 0; j < nvar; j++) {
 			xtest[j] = x[nobs * j + i];
 		}
-		rof_predict(&pred, 1, myROF, NTREES, xtest, dimX[1], MYCLAMP);
+		plof_predict(&pred, 1, myPLOF, NTREES, xtest, dimX[1], MYCLAMP);
 		printf("%g)\n", obs - pred);
 		printf("x11()\nhist(err, breaks = 50)\n");
 	}
-	free_trees(myROF, NTREES);
+	free_trees(myPLOF, NTREES);
 	return 0;
 }
 

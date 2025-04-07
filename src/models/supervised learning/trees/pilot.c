@@ -679,7 +679,7 @@ tree_t * pilot(double *y, double const *X, int *dimX, int *Kmax, int *nFit, int 
 		for (i = 1; i < n - 1; i++) {
 			printf("%g, ", err[i]);
 		}
-		printf("%g)\n", err[i]);
+		printf("%g)\n\n", err[i]);
 		#endif
 		free(err);
 		free(ivec);
