@@ -141,8 +141,9 @@ int main() {
 	}
 	sm = 1.0 / sm;
 	for (i = 0; i < 5; i++) w[i] *= sm;
-	printf("Initial values: "); for (i = 0; i < 5; i++) printf("%e ", w[i]); printf("\n");
+	printf("Initial values: "); for (i = 0; i < 5; i++) printf("%e ", w[i]);
 	printf("Objective: %f\n", obj(w, dta.mu, dta.sg, 5));
+	printf("\n");
 	min_within_simplex(w, 5, 30000, &dta, obj_grad);
 	printf("Final values: "); for (i = 0; i < 5; i++) printf("%e ", w[i]); printf("\n");
 	printf("Objective: %f\n", obj(w, dta.mu, dta.sg, 5));

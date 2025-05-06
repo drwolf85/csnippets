@@ -4,11 +4,11 @@
 
 /**
  * It computes the outer product of a triangular matrix with itself
- * 
+ *
  * @param mat the matrix to be transformed
  * @param nn the number of rows and columns in the matrix
  */
-void outer_prod_UpperTri(double *mat, int *nn) {
+static inline void outer_prod_UpperTri(double *mat, int *nn) {
     int i, j, k, n = *nn;
     double tmp;
     for (j = 0; j < n; j++) {
@@ -29,11 +29,11 @@ void outer_prod_UpperTri(double *mat, int *nn) {
 
 /**
  * It takes the upper triangular part of a square matrix and inverts it
- * 
+ *
  * @param mat the matrix to be inverted
  * @param nn the number of rows and columns in the matrix
  */
-void inverseUT(double *mat, int *nn) {
+static inline void inverseUT(double *mat, int *nn) {
     int i, j, k, pos, n = *nn;
     double tmp;
     for (i = n; i > 0; i--) {
@@ -51,11 +51,11 @@ void inverseUT(double *mat, int *nn) {
 
 /**
  * It takes a symmetric matrix and returns the Cholesky decomposition of it
- * 
+ *
  * @param mat the Hessian matrix
  * @param nn the number of rows and columns in the matrix
  */
-void cholHessMat(double *mat, int *nn) {
+static inline void cholHessMat(double *mat, int *nn) {
     int i, j, k = 0;
     double tmp;
 
@@ -68,7 +68,7 @@ void cholHessMat(double *mat, int *nn) {
     /* Procesing the other rows */
     for (i = 1; i < *nn; i++) {
         /* Loop for j < i */
-        for (j = 0; j < i; j++) 
+        for (j = 0; j < i; j++)
             mat[*nn * j + i] = 0.0;
         /* When j == i */
         k = *nn * i;
@@ -94,11 +94,11 @@ void cholHessMat(double *mat, int *nn) {
 
 /**
  * @brief Inversion of a Hessian Matrix
- * 
+ *
  * @param mat a (nxn) matrix of real numbers stored by column (column-major format)
  * @param nn the number of rows and columns of the Hessian matrix
  */
-void solveHessMat(double *mat, int *nn) {
+static inline void solveHessMat(double *mat, int *nn) {
     cholHessMat(mat, nn); /* Cholesky factorization */
     inverseUT(mat, nn); /* Upper triangular inversion */
     outer_prod_UpperTri(mat, nn); /* Outer product */
@@ -106,13 +106,13 @@ void solveHessMat(double *mat, int *nn) {
 
 /**
  * @brief Compute the inner product of a generic matrix X of size (n x p)
- * 
+ *
  * @param res_m a pointer to the symmetric matrix in output
  * @param x a pointer to the input matrix with data (stored as column-major)
  * @param n a pointer to the number of rows of `x`
  * @param p a pointer to the number of columns of `x`
  */
-void inner_prod_matrix(double *res_m, double *x, int *n, int *p) {
+static inline void inner_prod_matrix(double *res_m, double *x, int *n, int *p) {
     int i, j, k;
     double tmp;
     #pragma omp parallel for simd private(j, tmp, k)
@@ -122,16 +122,16 @@ void inner_prod_matrix(double *res_m, double *x, int *n, int *p) {
             for (k = 0; k < *n; k++) {
                 tmp += x[*n * i + k] * x[*n * j * + k];
             }
-            res_m[*p * i + j] = tmp; 
-            res_m[*p * j + i] = tmp; 
+            res_m[*p * i + j] = tmp;
+            res_m[*p * j + i] = tmp;
         }
     }
 }
 
 /**
  * It computes the Levenber (1944) optimization steps, to minimize a
- * nonlinear error function using the nonlinear least square approximation. 
- * 
+ * nonlinear error function using the nonlinear least square approximation.
+ *
  * @param param the parameters to be optimized
  * @param len the length of the parameter vector
  * @param lambda penalization parameter (assumed to be greater or equal of zero)
@@ -141,7 +141,7 @@ void inner_prod_matrix(double *res_m, double *x, int *n, int *p) {
  * @param error_func a routine to compute a `*n_obs` error vector
  * @param jacobian a routine to compute a `*n_obs`-by-`*len` Jacobian matrix
  */
-void levenberg(double *param, int *len, double *lambda,
+extern void levenberg(double *param, int *len, double *lambda,
                int *n_iter, int *n_obs, void *info,
                void (*error_func)(double *, double *, int *, void *),
                void (*jacobian)(double *, double *, int *, void *)) {

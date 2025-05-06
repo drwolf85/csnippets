@@ -4,11 +4,11 @@
 
 /**
  * It computes the outer product of a triangular matrix with itself
- * 
+ *
  * @param mat the matrix to be transformed
  * @param nn the number of rows and columns in the matrix
  */
-void outer_prod_UpperTri(double *mat, int *nn) {
+static inline void outer_prod_UpperTri(double *mat, int *nn) {
     int i, j, k, n = *nn;
     double tmp;
     for (j = 0; j < n; j++) {
@@ -29,11 +29,11 @@ void outer_prod_UpperTri(double *mat, int *nn) {
 
 /**
  * It takes the upper triangular part of a square matrix and inverts it
- * 
+ *
  * @param mat the matrix to be inverted
  * @param nn the number of rows and columns in the matrix
  */
-void inverseUT(double *mat, int *nn) {
+static inline void inverseUT(double *mat, int *nn) {
     int i, j, k, pos, n = *nn;
     double tmp;
     for (i = n; i > 0; i--) {
@@ -51,11 +51,11 @@ void inverseUT(double *mat, int *nn) {
 
 /**
  * It takes a symmetric matrix and returns the Cholesky decomposition of it
- * 
+ *
  * @param mat the Hessian matrix
  * @param nn the number of rows and columns in the matrix
  */
-void cholHessMat(double *mat, int *nn) {
+static inline void cholHessMat(double *mat, int *nn) {
     int i, j, k = 0;
     double tmp;
 
@@ -68,7 +68,7 @@ void cholHessMat(double *mat, int *nn) {
     /* Procesing the other rows */
     for (i = 1; i < *nn; i++) {
         /* Loop for j < i */
-        for (j = 0; j < i; j++) 
+        for (j = 0; j < i; j++)
             mat[*nn * j + i] = 0.0;
         /* When j == i */
         k = *nn * i;
@@ -94,11 +94,11 @@ void cholHessMat(double *mat, int *nn) {
 
 /**
  * @brief Inversion of a Hessian Matrix
- * 
+ *
  * @param mat a (nxn) matrix of real numbers stored by column (column-major format)
  * @param nn the number of rows and columns of the Hessian matrix
  */
-void solveHessMat(double *mat, int *nn) {
+static inline void solveHessMat(double *mat, int *nn) {
     cholHessMat(mat, nn); /* Cholesky factorization */
     inverseUT(mat, nn); /* Upper triangular inversion */
     outer_prod_UpperTri(mat, nn); /* Outer product */
@@ -106,8 +106,8 @@ void solveHessMat(double *mat, int *nn) {
 
 /**
  * It computes the Gauss-Newton optimization steps, to minimize a
- * nonlinear error function using the nonlinear least square approximation. 
- * 
+ * nonlinear error function using the nonlinear least square approximation.
+ *
  * @param param the parameters to be optimized
  * @param len the length of the parameter vector
  * @param n_iter number of iterations
@@ -115,7 +115,7 @@ void solveHessMat(double *mat, int *nn) {
  * @param grad a routine that computes the gradient of the objective function
  * @param hess a routine that computes the Hessian of the objective function
  */
-void gaussnewton(double *param, int *len, int *n_iter, void *info,
+extern void gaussnewton(double *param, int *len, int *n_iter, void *info,
                  void (*grad)(double *, double *, int *, void *),
                  void (*hess)(double *, double *, int *, void *)) {
     int t, i, j, np = *len;
