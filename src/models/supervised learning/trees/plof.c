@@ -472,7 +472,7 @@ void plof_predict(double *y, int const dy,
 #define MYCLAMP true
 
 int main() {
-	int Kmax = 33;//(int) (log2((double) nobs) * 0.5);
+	int Kmax = 99;//(int) (log2((double) nobs) * 0.5);
 	int nLeaf = 7;
 	int nFit = nLeaf * 2 + 1;
 	int dimX[2] = {(int) nobs, (int) nvar};
