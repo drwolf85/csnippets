@@ -141,7 +141,7 @@ void queue_init(Queue *queue, rbTree *node) {
  * @param node Pointer to a node in a red-black tree
  */
 void queue_append(Queue *queue, rbTree *node) {
-	if (queue) {
+	if (queue && node) {
 		if (queue->len == 0) {
 			queue_init(queue, node);
 		}
@@ -216,21 +216,23 @@ static void closest(double *mip, double **mip_vec, double *obs_vec,
  * @param p Pointer to the length of the three vectors mentioned above
  * @param dst Pointer to a distance/dissimilarity function
  */
-static void cmp(double *lr, double *query, 
+static bool cmp(double *lr, double *query, 
 		double *v1, double *v2, size_t const *p,
 		double (*dst)(double *, double *, size_t const *)) {
 	double dist = (double) INFINITY;
 	double d1, d2;
-	if (lr && query && v1 && v2 && p && dst) {
+	if (__builtin_expect(lr && query && v1 && v2 && p && dst, 1)) {
 		dist = dst(v1, v2, p);
-		if (dist <= DST_EPSILON) {
+		if (__builtin_expect(dist <= DST_EPSILON, 0)) {
 			*lr = 0.0;
-			return;
+			return true;
 		}
 		d1 = dst(v1, query, p) / dist;
 		d2 = dst(v2, query, p) / dist;
 		*lr = d1 / (d1 + d2) - 0.5;
+		return (bool)(fabs(*lr) <= sqrt(DST_EPSILON));
 	}
+	return true;
 }
 
 /**
@@ -253,26 +255,32 @@ void lookup(double **mip_vec, double *q, size_t const *p,
 	double mip = (double) INFINITY;
 	Queue que;
 	rbTree *curr;
-	/* bool prune; */
+	bool prune, canbreak = false;
 	double lr = 0.0;
 	if (mip_vec) {
 		queue_init(&que, node);
 		while (que.len > 0) {
-			curr = queue_pop(&que);	/* Find closest point */
+			curr = queue_pop(&que);	
+			/* Find closest point */
 			closest(&mip, mip_vec, curr->data, q, p, dst);
+			if (canbreak) break;
+#ifdef DEBUG
+			printf("%f ", mip);
+#endif
 			if (curr->left && curr->right) { /* Determine cmp and pruning */
-				cmp(&lr, q, curr->left->data, curr->right->data, p, dst);
+				prune = cmp(&lr, q, curr->left->data, \
+						curr->right->data, p, dst);
 				if (lr <= 0.0) {
 					queue_append(&que, curr->left);
-					/* if (!prune) {
+					if (!prune) {
 						queue_append(&que, curr->right);
-					} */
+					}
 				}
 				else {
 					queue_append(&que, curr->right);
-					/* if (!prune) {
+					if (!prune) {
 						queue_append(&que, curr->left);
-					} */
+					}
 				}
 			}
 			else {
@@ -283,12 +291,15 @@ void lookup(double **mip_vec, double *q, size_t const *p,
 					queue_append(&que, curr->right);
 				}
 				else {
-					que.len = 0;
-					if (que.first) lst_free(que.first);
-					return;
+					canbreak = (bool)(que.first == que.last);
 				}
 			}
 		}
+                que.len = 0;
+                if (que.first) lst_free(que.first);
+#ifdef DEBUG
+                printf("\n");
+#endif
 	}
 }
 
@@ -313,7 +324,7 @@ int main(void) {
 	size_t const n = 10;
 	size_t i, j, k, mxd = 0;
 	size_t ord[n];
-	double q[2] = { 0.02665879, -1.382227 };
+	double q[2] = { 0.2665879, -1.382227 };
 	double *ptr = NULL;
 	rbTree *root = NULL;
 	/* Shuffling step: important for high-performance during lookup */
