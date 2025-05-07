@@ -8,12 +8,12 @@
 #include <omp.h>
 
 /* Modifiable definitions */
-#define RT_MAX_RND_TESTS 10
+#define RF_MAX_RND_TESTS 10
 
 /* DO NOT MODIFY THE DEFINITIONS BELOW */
-#define RT_MIN_SIZE_LEAF 2
-#define RT_MAX_DEPTH 63
-#define RT_UNIF01 ((0.5 + (double) rand()) * imxrnd)
+#define RF_MIN_SIZE_LEAF 2
+#define RF_MAX_DEPTH 63
+#define RF_UNIF01 ((0.5 + (double) rand()) * imxrnd)
 
 static uint64_t whv = 0ULL;
 static double const imxrnd = 1.0 / (1.0 + (double) RAND_MAX);
@@ -112,6 +112,12 @@ static void free_node(node *nd) {
   free(nd);
 }
 
+extern void free_forest(node **T, uint64_t nt) {
+  uint64_t t;
+  for (t = 0; t < nt; t++) free_node(T[t]);
+  free(T);
+}
+
 /**
  * @brief Properly allocate the memory used by a node
  * 
@@ -179,29 +185,6 @@ static inline double wss(datum *dta, double s, uint64_t n) {
 }
 
 /**
- * @brief Statistics used for the Sliced Inverse Regression (S.I.R.)
- * 
- * @param dta Pointer to a set of data used to train the model
- * @param n Pointer to the number of data points in the training set
- * @param p Pointer to the number of variables
- */
-static inline vec * sir_stats(datum *dta, uint64_t *n, uint64_t *p) {
-  int i, j;
-  vec *res = (vec *) calloc(*p, sizeof(vec));
-  if (res) {
-    for (j = 0; j < *p; j++) {
-      for (i = 1; i < *n; i++) {
-        res[j].v += fabs(dta[i].x[j] - dta[i - 1].x[j]);
-      }
-      res[j].v /= (double) (*n - 1);
-      res[j].i = j;
-    }
-    qsort(res, *p, sizeof(vec), cmp_vec);
-  }
-  return res;
-}
-
-/**
  * @brief Recursively build a tree using a stochastic training algorithm
  * 
  * @param T Pointer to the node that will be splitted
@@ -228,19 +211,16 @@ static void build_tree(node *T, datum *dta, uint64_t n, uint8_t lev, uint64_t *p
     nmn = ((uint64_t) *mnsn - 1ULL) % n;
     nmx = (n - ((uint64_t) *mnsn)) % n;
     if (nmn >= nmx) return; 
-    /* Test covariates based on X|y */
-    qsort(dta, n, sizeof(datum), cmp_yval);
-    spread = sir_stats(dta, &n, p);
     /* Pick a variable based on its "sorted spread" */
-    whv = spread ? spread[j].i : rand() % *p;
+    whv = rand() % *p;
     qsort(dta, n, sizeof(datum), cmp_xval);
     /* Randomly find a split to split the data (i.e., method based on random partitioning) */
     T->var2split = whv;
     T->split = dta[nmn].x[whv] + (dta[nmx].x[whv] - dta[nmn].x[whv]) * 0.5;
     tss_in_node = wss(dta, T->split, n);
-    for (i = 0; i < RT_MAX_RND_TESTS; i++) {
+    for (i = 0; i < RF_MAX_RND_TESTS; i++) {
     /*for (i = nmn + 1; i < nmx; i++) { */
-      s = dta[nmn].x[whv] + (dta[nmx].x[whv] - dta[nmn].x[whv]) * RT_UNIF01;
+      s = dta[nmn].x[whv] + (dta[nmx].x[whv] - dta[nmn].x[whv]) * RF_UNIF01;
       /*s = dta[i].x[whv];*/
       wss_in_node = wss(dta, s, n);
       T->split += (double) (wss_in_node < tss_in_node) * (s - T->split);
@@ -263,27 +243,28 @@ static void build_tree(node *T, datum *dta, uint64_t n, uint8_t lev, uint64_t *p
 }
 
 /**
- * @brief Regression Tree (based on one covariate and one response variable)
+ * @brief Random Forests based on Regression Tree (based on one covariate and one response variable)
  * 
  * @param x Pointer to a set of the covariates (an n-by-p matrix)
  * @param y Pointer to the values of the response variable
  * @param n Number of samples to train the model
  * @param p Number of predictor variables
+ * @param nt Number of trees to grow
  * @param max_depth Maximum depth of the tree
  * @param mnsn Minimum number of samples allowed in final leaves 
  * @param X_Col_Major Boolean value. It must be set to `true` if the matrix in `x` is stored in column major format
  * 
  * @return A pointer to a `node` structure containing a tree fully trained
  */
-extern node * rt(double *x, double *y, uint64_t n, uint64_t p, uint8_t max_depth, uint8_t mnsn, bool X_Col_Major) {
-  uint64_t i, j;
+extern node ** rf(double *x, double *y, uint64_t n, uint64_t p, uint64_t nt, uint8_t max_depth, uint8_t mnsn, bool X_Col_Major) {
+  uint64_t i, j, t;
   double *Xmat_t;
-  node *T = alloc_node();
+  node **T = (node **) calloc(nt, sizeof(node *));
   datum *dta = (datum *) calloc(n, sizeof(datum));
+  if (max_depth > RF_MAX_DEPTH) max_depth = RF_MAX_DEPTH;
+  if (mnsn < RF_MIN_SIZE_LEAF) mnsn = RF_MIN_SIZE_LEAF;
   Xmat_t = (double *) malloc(p * n * sizeof(double));
   if (T && dta && Xmat_t) {
-    if (max_depth > RT_MAX_DEPTH) max_depth = RT_MAX_DEPTH;
-    if (mnsn < RT_MIN_SIZE_LEAF) mnsn = RT_MIN_SIZE_LEAF;
     if (X_Col_Major) {
       #pragma omp parallel for simd private(i, j) collapse(2)
       for (i = 0; i < n; i++) for (j = 0; j < p; j++) Xmat_t[p * i + j] = x[j * n + i];
@@ -297,7 +278,10 @@ extern node * rt(double *x, double *y, uint64_t n, uint64_t p, uint8_t max_depth
       dta[i].x = &Xmat_t[i * p];
       dta[i].y = y[i];
     }
-    build_tree(T, dta, n, 0, &p, &max_depth, &mnsn);
+    for (t = 0; t < nt; t++) {
+      T[t] = alloc_node();
+      if (T[t]) build_tree(T[t], dta, n, 0, &p, &max_depth, &mnsn);
+    }
   }
   free(Xmat_t);
   free(dta);
@@ -312,9 +296,9 @@ extern node * rt(double *x, double *y, uint64_t n, uint64_t p, uint8_t max_depth
  * 
  * @return double
  */
-extern double rt_predict(double *x, node *T) {
+static double rt_predict(double *x, node *T) {
   double res = nan("");
-  if (T) {
+  if (x && T) {
     res = T->y_bar;
     if (x[T->var2split] > T->split) {
         if (T->r) res += rt_predict(x, T->r);
@@ -334,7 +318,7 @@ extern double rt_predict(double *x, node *T) {
  * 
  * @return double
  */
-extern double rt_var_prediction(double *x, node *T) {
+static double rt_var_prediction(double *x, node *T) {
   double res = nan("");
   if (T) {
     res = T->var_y_bar;
@@ -348,12 +332,68 @@ extern double rt_var_prediction(double *x, node *T) {
   return res;
 }
 
+/**
+ * @brief Predict using a Random Forest (R.F.)
+ * 
+ * @param x Pointer to the vector of covariates used to generate the prediction
+ * @param T Pointer to pointer of a fully-trained tree
+ * @param nt Number of trees that grew
+ * 
+ * @return double
+ */
+extern double rf_predict(double *x, node **T, uint64_t nt) {
+  double res = nan("");
+  double summary = 0.0;
+  double wt, nrm = 0.0;
+  uint64_t t;
+  if (x && T) {
+    for (t = 0; t < nt; t++) {
+      wt = rt_var_prediction(x, T[t]);
+      wt = 1.0 / sqrt(wt + 1e-9);
+      nrm += wt;
+      summary += wt * rt_predict(x, T[t]);
+    }
+    nrm = 1.0 / nrm;
+    res = summary * nrm;
+  }
+  return res;
+}
+
+/**
+ * @brief Variance of the prediction made using a Random Forest (R.F.)
+ * 
+ * @param x Pointer to the vector of covariates used to generate the prediction
+ * @param T Pointer to pointer of a fully-trained tree
+ * @param nt Number of trees that grew
+ * 
+ * @return double
+ */
+extern double rf_var_prediction(double *x, node **T, uint64_t nt) {
+  double res = nan("");
+  double summary = 0.0;
+  double wt, nrm = 0.0;
+  uint64_t t;
+  if (x && T) {
+    for (t = 0; t < nt; t++) {
+      wt = rt_var_prediction(x, T[t]);
+      wt = 1.0 / sqrt(wt + 1e-9);
+      nrm += wt;
+      summary += wt * rt_var_prediction(x, T[t]);
+    }
+    nrm = 1.0 / nrm;
+    res = summary * nrm;
+  }
+  return res;
+
+}
+
 #ifdef DEBUG
 /* Code to the debug the functions above*/
 
 #define _MY_N_ 10000
-#define _MY_MAX_DEPTH_ 50
-#define _MY_LEAF_SIZE_ 1
+#define _MY_MAX_DEPTH_ 12
+#define _MY_LEAF_SIZE_ 5
+#define _MY_N_TREES_ 100
 
 double my_test_fun(double *x) {
   return 1.0 / M_PI + M_PI * x[0] - cos(2.0 * M_PI * M_PI * x[1]) + x[2] / (0.125 + fabs(x[2]));
@@ -361,7 +401,7 @@ double my_test_fun(double *x) {
 
 int main() {
   int i, j;
-  node *mytree;
+  node **myforest;
   double y[_MY_N_];
   double x[_MY_N_ * 3];
   double ptx[3], pred, sep;
@@ -370,24 +410,24 @@ int main() {
     x[3 * i] = 0.5 + (double) i;
     x[3 * i] /= 1.0 + (double) _MY_N_;
     x[3 * i] = 2.0 * x[3 * i] - 1.0;
-    for (j = 1; j < 3; j++) x[3 * i + j] = 2.0 * RT_UNIF01 - 1.0;
+    for (j = 1; j < 3; j++) x[3 * i + j] = 2.0 * RF_UNIF01 - 1.0;
     y[i] = my_test_fun(&x[3 * i]);
   }
   printf("Data are now initilized.\n");
-  mytree = rt(x, y, _MY_N_, 3, _MY_MAX_DEPTH_, _MY_LEAF_SIZE_, false);
-  printf("Training of a CART model terminated.\n");
-  if (mytree) {
+  myforest = rf(x, y, _MY_N_, 3, _MY_N_TREES_, _MY_MAX_DEPTH_, _MY_LEAF_SIZE_, false);
+  printf("Training of a Random Forest model terminated.\n");
+  if (myforest) {
     ptx[0] = 0.54321;
     ptx[1] = -0.54321;
-    ptx[2] = 0.0;
-    pred = rt_predict(ptx, mytree);
-    sep = sqrt(rt_var_prediction(ptx, mytree));
+    ptx[2] = 0.25;
+    pred = rf_predict(ptx, myforest, _MY_N_TREES_);
+    sep = sqrt(rf_var_prediction(ptx, myforest, _MY_N_TREES_));
     printf("Testing prediction in (");
     for (j = 0; j < 3; j++) printf("%f%s", ptx[j], j + 1 < 3 ? ", " : ")");
     printf(": %f (%f)\n", ptx, pred, sep);
     printf("True value: %f\n", my_test_fun(ptx));
   }
-  free_node(mytree);
+  free_forest(myforest, _MY_N_TREES_);
   printf("Allocated memory is now free.\n");
   return 0;
 }

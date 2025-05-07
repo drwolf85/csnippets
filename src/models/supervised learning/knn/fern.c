@@ -258,10 +258,8 @@ void lookup(double **mip_vec, double *q, size_t const *p,
 	if (mip_vec) {
 		queue_init(&que, node);
 		while (que.len > 0) {
-			curr = queue_pop(&que);
-			if (curr != node) { /* Find closest point */
-				closest(&mip, mip_vec, curr->data, q, p, dst);
-			}
+			curr = queue_pop(&que);	/* Find closest point */
+			closest(&mip, mip_vec, curr->data, q, p, dst);
 			if (curr->left && curr->right) { /* Determine cmp and pruning */
 				cmp(&lr, q, curr->left->data, curr->right->data, p, dst);
 				if (lr <= 0.0) {
