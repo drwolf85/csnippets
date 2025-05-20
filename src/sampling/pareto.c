@@ -26,7 +26,9 @@ static int cmp_pranks(void const *aa, void const *bb) {
  */
 bool * pareto(double *pik, size_t N, size_t n) {
 	double u;
+#ifdef DEBUG
 	double sum = 0.0;
+#endif
 	size_t i = 0, pc = 0;
 	bool *smp = NULL;
 	pareto_rank *q = NULL;
@@ -35,10 +37,14 @@ bool * pareto(double *pik, size_t N, size_t n) {
 	smp = (bool *) calloc(N, sizeof(bool));
 	q = (pareto_rank *) malloc(N * sizeof(pareto_rank));
 	if (__builtin_expect(smp && q, 1)) {
+#ifdef DEBUG
 		for (i = 0; i < N; i++) sum += pik[i];
 		sum = (double) n / sum;
+#endif
 		for (i = 0; i < N; i++) {
+#ifdef DEBUG
 			pik[i] *= sum;
+#endif
 			if (pik[i] <= 0.0) { 
 				q[i].q = INFINITY;
 			}
@@ -46,7 +52,8 @@ bool * pareto(double *pik, size_t N, size_t n) {
 				q[i].q = 0.0;
 			}
 			else {
-				u = (0.5 + (double) rand()) / (1.0 + (double) RAND_MAX);
+				u = 0.5 + (double) arc4random();
+				u /= (double) (1ULL << 32ULL);
 				q[i].q = u * (1.0 - pik[i]);
 				q[i].q /= pik[i] * (1.0 - u);
 			}
@@ -75,7 +82,6 @@ int main(void) {
 	size_t const n = 3;
 	size_t i; 
 	bool *res;
-	srand(time(NULL));
 	res = pareto(pik, N, n);
 	if (__builtin_expect(res != NULL, 1)) {
 		printf("Sampled if equal to one:\n");

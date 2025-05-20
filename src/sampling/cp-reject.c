@@ -23,8 +23,8 @@ bool * cpois_reject(double *pik, size_t N, size_t n) {
 	if (__builtin_expect(smp != NULL, 1)) {
 		while (c < n) {
 			i %= N;
-			u = 0.5 + (double) rand();
-			u /= 1.0 + (double) RAND_MAX;
+			u = 0.5 + (double) arc4random();
+			u /= (double) (1ULL << 32ULL);
 			if (u <= pik[i] && smp[i] == false) {
 				smp[i] = true;
 				c++;
@@ -42,7 +42,6 @@ int main(void) {
 	size_t const n = 3;
 	size_t i; 
 	double sm = 0.0;
-	srand(time(NULL));
 	for (i = 0; i < N; i++) sm += pik[i];
 	sm = (double) n / sm;
 	for (i = 0; i < N; i++) pik[i] *= sm;

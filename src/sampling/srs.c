@@ -14,13 +14,15 @@
  */
 size_t * srswr(size_t N, size_t n) {
 	size_t *smp = NULL;
-	size_t i = 0;
+	size_t w, i = 0;
 	double u;
-	smp = (size_t *) calloc(n, sizeof(size_t));
-        if (__builtin_expect(smp != NULL, 1)) {
+	smp = (size_t *) calloc(N, sizeof(size_t));
+        if (__builtin_expect(smp != NULL && N > 0, 1)) {
 		for (; i < n; i++) {
-			u = (double) rand() / (0.5 + (double) RAND_MAX);
-			smp[i] = (size_t) floor(u * (double) N);
+			u = (double) arc4random();
+			u /= (double) (1ULL << 32LL) - 0.5;
+			w = (size_t) floor(u * (double) N);
+			smp[w]++;
 		}
 	}
 	return smp;
@@ -57,8 +59,8 @@ bool * srswor(size_t N, size_t n) {
 		while (c < n) {
 			i %= N;
 			pr = prob_srswor(c + 1, N);
-			u = 0.5 + (double) rand();
-			u /= 1.0 + (double) RAND_MAX;
+			u = 0.5 + (double) arc4random();
+			u /= (double) (1ULL << 32ULL);
 			if (u <= pr && smp[i] == false) {
 				smp[i] = true;
 				c++;
@@ -74,12 +76,11 @@ int main(void) {
         size_t const N = 7;
         size_t const n = 3;
         size_t i;
-        srand(time(NULL));
         size_t *vec = srswr(n, N);
 	bool *res = srswor(N, n);
         if (__builtin_expect(res && vec, 1)) {
-                printf("SRSWR (samples IDs are shown below):\n");
-                for (i = 0; i < N; i++) printf("%lu ", vec[i]);
+                printf("SRSWR (number to time units are sampled):\n");
+                for (i = 0; i < n; i++) printf("%lu ", vec[i]);
                 printf("\nSRSWOR (samples are equal to one):\n");
                 for (i = 0; i < N; i++) printf("%u ", (unsigned) res[i]);
         }

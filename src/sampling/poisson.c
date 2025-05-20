@@ -22,17 +22,17 @@ bool * poisson(double *pik, size_t N, size_t n) {
 	if (n > N || n > pc) return smp;
 	smp = (bool *) calloc(N, sizeof(bool));
 	if (__builtin_expect(smp != NULL, 1)) {
+#ifdef DEBUG
 		for (i = 0; i < N; i++) sm += pik[i];
 		sm = (double) n / sm;
 		for (i = 0; i < N; i++) pik[i] *= sm;
-#ifdef DEBUG
 		printf("Inclusion probabilities:\n");
 		for (i = 0; i < N; i++) printf("%f ", pik[i]);
 		printf("\n");
 #endif
 		for (i = 0; i < N; i++) {
-			sm = 0.5 + (double) rand(); 
-			sm /= 1.0 + (double) RAND_MAX;
+			sm = 0.5 + (double) arc4random(); 
+			sm /= (double) (1ULL << 32ULL);
 			if (sm <= pik[i]) {
 				smp[i] = true;
 			}
@@ -47,7 +47,6 @@ int main(void) {
 	size_t const N = 7;
 	size_t const n = 3;
 	size_t i; 
-	srand(time(NULL));
 	bool *res = poisson(pik, N, n);
 	if (__builtin_expect(res != NULL, 1)) {
 		printf("Sampled if equal to one:\n");
