@@ -71,7 +71,7 @@ double qcauchy(double p, double m, double s) {
  */
 double rcauchy(double mu, double sd) {
    unsigned long u, m = ~(1 << 31);
-   u = rand();
+   u = arc4random();
    u &= m;
    return qcauchy(ldexp((double) u, -31), mu, sd);
 }
@@ -81,7 +81,6 @@ int main() {
     double x = -1.64;
     double d, p, q;
     double tmp;
-    srand(time(NULL)); /* Initialize the random generator */
     d = dcauchy(x, 0.0, 1.0);
     p = pcauchy(x, 0.0, 1.0);
     q = qcauchy(0.95, 0.0, 1.0);

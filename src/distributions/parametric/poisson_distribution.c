@@ -90,7 +90,7 @@ double rpoisson(double lambda) {
     unsigned long u, m;
     double z = nan("");
     if (lambda >= 0.0) {
-        u = rand();
+        u = arc4random();
         m = ~(1 << 31);
         u &= m;
         z = qpoisson(ldexp((double) u, -31), lambda);

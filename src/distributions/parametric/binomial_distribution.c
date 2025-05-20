@@ -115,7 +115,7 @@ double rbinom(int n, double prob) {
     if (n >= 0 && prob >= 0.0 && prob <= 1.0) {
         z = 0.0;
         for (i = 0; i < n; i++) {
-            u = rand();
+            u = arc4random();
             u &= m;
             z += (double) (ldexp((double) u, -31) < prob);
         }
@@ -128,7 +128,6 @@ int main() {
     double x = 1.0;
     double d, p, q;
     double tmp;
-    srand(time(NULL)); /* Initialize the random generator */
     d = dbinom(x, 5, 0.25);
     p = pbinom(x, 5, 0.75);
     q = qbinom(0.95, 5, 0.777);

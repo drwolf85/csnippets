@@ -78,7 +78,7 @@ double qtriang(double p, double m, double s) {
 double rtriang(double mu, double sd) {
    unsigned long u, v, m = (1 << 16) - 1;
    double a, b, s;
-   u = rand();
+   u = arc4random();
    v = (((u >> 16) & m) | ((u & m) << 16));
    m = ~(1 << 31);
    u &= m;
@@ -93,7 +93,6 @@ int main() {
     double x = 0.64;
     double d, p, q;
     double tmp;
-    srand(time(NULL)); /* Initialize the random generator */
     d = dtriang(x, 0.0, 1.0);
     p = ptriang(x, 0.0, 1.0);
     q = qtriang(0.9352, 0.0, 1.0);

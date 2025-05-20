@@ -80,7 +80,7 @@ double rbern(double prob) {
     unsigned long u, m;
     double z = nan("");
     if (prob >= 0.0 && prob <= 1.0) {
-        u = rand();
+        u = arc4random();
         m = ~(1 << 31);
         u &= m;
         z = (double) (ldexp((double) u, -31) < prob);        
@@ -93,7 +93,6 @@ int main() {
     double x = 1.0;
     double d, p, q;
     double tmp;
-    srand(time(NULL)); /* Initialize the random generator */
     d = dbern(x, 0.5);
     p = pbern(x, 0.75);
     q = qbern(0.95, 0.777);

@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define RUNIF01 ((double) rand() / (double) RAND_MAX)
+#define RUNIF01 ((double) arc4random() / (double) ((1ULL << 32ULL) - 1ULL))
 #define REXP1 (-log(RUNIF01))
 
 extern double dbeta(double x, double alpha, double beta) {
@@ -20,7 +20,7 @@ extern double dbeta(double x, double alpha, double beta) {
 static inline double rnorm(double mu, double sd) {
    unsigned long u, v, m = (1 << 16) - 1;
    double a, b, s;
-   u = rand();
+   u = arc4random();
    v = (((u >> 16) & m) | ((u & m) << 16));
    m = ~(1 << 31);
    u &= m;
@@ -91,7 +91,6 @@ extern double rbeta(double alpha, double beta) {
 int main() {
 	unsigned i;
 	double g;
-	srand(time(NULL));
 	printf("Beta density f(0.5, 0.5, 0.5) = %f\n", dbeta(0.5,0.5,0.5));
 	for (i = 0; i < N; i++) {
 		g = rbeta(0.5, 0.5);

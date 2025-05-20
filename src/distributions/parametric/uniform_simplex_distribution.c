@@ -24,7 +24,7 @@ double * runifsimplex(int p) {
   double z = 0.0;
   if (v) {
     for (i = 0; i < p; i++) {
-        u = (0.5 + (double) (rand() & m)) / (1.0 + (double) m);
+        u = (0.5 + (double) (arc4random() & m)) / (1.0 + (double) m);
         v[i] = -log(u);
         z += v[i];
     }
@@ -40,7 +40,6 @@ double * runifsimplex(int p) {
 int main() {
   int i, j;
   double *x;
-  srand(time(NULL));
   printf("Simualtion of a uniform simplex:\n");
   for (j = 0; j < RUNS; j++) {
     x = runifsimplex(P);

@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-static inline double cubic_basis(double x, double knot) {
+static inline double cubic_basis(double x, double knot, char pos) {
 	double r = x - knot;
+	r *= (double) (pos != 0) * 2.0 - 1.0;
 	r *= (double) (r > 0.0);
 	r *= r * r;
 	return r;
@@ -17,7 +18,7 @@ static inline double cubic_basis(double x, double knot) {
 int main(void) {
 	int i, j;
 	double knt[K];
-	double par[K + 4];
+	double par[2 * K + 4];
 	double x[N];
 	double y[N] = {0};
 	double tmp;
@@ -27,7 +28,7 @@ int main(void) {
 	for (i = 0; i < K; i++) knt[i] = (0.5 + (double) rand()) / (double) RAND_MAX;
 	i = 0;
 	par[i] = 2.0 * (0.5 + (double) rand()) / (double) RAND_MAX - 1.0;
-	for (i = 1; i < K + 4; i++) {
+	for (i = 1; i < 2 * K + 4; i++) {
 		par[i] = 2.0 * (0.5 + (double) rand()) / (double) RAND_MAX - 1.0;
 	}
 	for (i = 0; i < N; i++) {
@@ -37,9 +38,8 @@ int main(void) {
 		y[i] += par[2] * tmp;
 		tmp *= tmp;
 		y[i] += par[3] * tmp;
-		for (j = 4; j < K + 4; j++) {
-			y[i] += par[j] * cubic_basis(x[i], knt[j - 4]);
-		}
+		for (j = 4; j < K + 4; j++) y[i] += par[j] * cubic_basis(x[i], knt[j - 4], 0);
+		for (j = K + 4; j < 2 * K + 4; j++) y[i] += par[j] * cubic_basis(x[i], knt[j - 4 - K], 1);
 	}
 	printf("Testing Inputs and Outputs\n");
 	printf("x <- c("); for (i = 0; i < N - 1; i++) printf("%g, ", x[i]);

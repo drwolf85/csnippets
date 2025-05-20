@@ -64,7 +64,7 @@ double qexp(double p, double lambda) {
 double rexp(double lambda) {
     unsigned long u, m;
     if (lambda >= 0.0) {
-        u = rand();
+        u = arc4random();
         m = ~(1 << 31);
         u &= m;
         return (31 * M_LN2 - log(u)) / lambda;
@@ -79,7 +79,6 @@ int main() {
     double x = 1.64;
     double d, p, q;
     double tmp;
-    srand(time(NULL)); /* Initialize the random generator */
     d = dexp(x, 2.0);
     p = pexp(x, 2.0);
     q = qexp(0.95, 1.0);

@@ -80,7 +80,7 @@ double rgeom(double prob) {
     unsigned long u, m;
     double z = nan("");
     if (prob >= 0.0 && prob <= 1.0) {
-        u = rand();
+        u = arc4random();
         m = ~(1 << 31);
         u &= m;
         z = qgeom(ldexp((double) u, -31), prob);
@@ -93,7 +93,6 @@ int main() {
     int x = 2;
     double d, p, q;
     double tmp;
-    srand(time(NULL)); /* Initialize the random generator */
     d = dgeom(x, 0.25);
     p = pgeom(x, 0.75);
     q = qgeom(0.95, 0.777);

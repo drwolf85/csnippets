@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define RUNIF01 ((double) rand() / (double) RAND_MAX)
+#define RUNIF01 ((double) arc4random() / (double) ((1ULL << 32ULL) - 1ULL))
 #define REXP1 (-log(RUNIF01))
 
 extern double dgamma(double x, double alpha, double beta) {
@@ -19,7 +19,7 @@ extern double dgamma(double x, double alpha, double beta) {
 static inline double rnorm(double mu, double sd) {
    unsigned long u, v, m = (1 << 16) - 1;
    double a, b, s;
-   u = rand();
+   u = arc4random();
    v = (((u >> 16) & m) | ((u & m) << 16));
    m = ~(1 << 31);
    u &= m;
@@ -84,7 +84,6 @@ extern double rgamma(double alpha, double beta) {
 int main() {
 	unsigned i;
 	double g;
-	srand(time(NULL));
 	printf("Gamma density f(1, 1, 1) = %f\n", dgamma(1.0,1.0,1.0));
 	for (i = 0; i < N; i++) {
 		g = rgamma(10.999, 0.5);

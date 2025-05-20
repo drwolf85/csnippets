@@ -70,7 +70,7 @@ double qunif(double p, double a, double b) {
 double runif(double a, double b) {
     unsigned long u, m = ~(1 << 31);
     if (b > a) {
-        u = rand() & m;
+        u = arc4random() & m;
         return ldexp((double) u, -31) * (b - a) + a;
     } 
     else {
@@ -83,7 +83,6 @@ int main() {
     double x = 1.64;
     double d, p, q;
     double tmp;
-    srand(time(NULL)); /* Initialize the random generator */
     d = dunif(x, 0.0, 2.0);
     p = punif(x, 0.0, 2.0);
     q = qunif(0.95, 0.0, 1.0);

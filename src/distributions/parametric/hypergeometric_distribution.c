@@ -105,7 +105,7 @@ double qhyper(double p, int m, int n, int k) {
 double rhyper(int m, int n, int k) {
     unsigned long u, v;
     double z;
-    u = rand();
+    u = arc4random();
     v = ~(1 << 31);
     u &= v;
     z = qhyper(ldexp((double) u, -31), m, n, k);
@@ -117,7 +117,6 @@ int main() {
     int x = 2;
     double d, p, q;
     double tmp;
-    srand(time(NULL)); /* Initialize the random generator */
     d = dhyper(x, 5, 2, 3);
     p = phyper(x, 5, 2, 3);
     q = qhyper(0.95, 5, 2, 3);

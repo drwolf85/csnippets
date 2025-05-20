@@ -75,11 +75,11 @@ double qcos(double p, double m, double s) {
  * @return A random number from a cosine distribution with location `mu` and scale `sd`.
  */
 double rcos(double mu, double sd) {
-   unsigned long u, m = ~(1 << 31);
-   double a, b, s;
-   u = rand();
-   u &= m;
-   return qcos(ldexp((double) u, -31), mu, sd);
+   double const m = 1.0 / (double) ((1ULL << 32ULL) - 1ULL);
+   double u;
+   u = 0.5 + (double) arc4random();
+   u *= m;
+   return qcos(u, mu, sd);
 }
 
 /* Test function */
@@ -87,7 +87,6 @@ int main() {
     double x = -1.64;
     double d, p, q;
     double tmp;
-    srand(time(NULL)); /* Initialize the random generator */
     d = dcos(x, 0.0, 1.0);
     p = pcos(x, 0.0, 1.0);
     q = qcos(0.95, 0.0, 1.0);
