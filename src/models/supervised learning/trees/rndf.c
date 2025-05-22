@@ -20,6 +20,8 @@ typedef struct node {
   size_t nl;
   struct node *lf;
   double *pred;
+  double *se;
+  size_t *nz;
 } node;
 
 /**
@@ -47,32 +49,33 @@ static inline void free_root(node *nd, size_t n_nodes) {
       if (__builtin_expect(nd[i].prj != NULL, 1)) free(nd[i].prj);
       if (__builtin_expect(nd[i].lf != NULL, 1)) free_root(nd[i].lf, nd[i].nl);
       if (__builtin_expect(nd[i].pred != NULL, 1)) free(nd[i].pred);
+      if (__builtin_expect(nd[i].se != NULL, 1)) free(nd[i].se);
+      if (__builtin_expect(nd[i].nz != NULL, 1)) free(nd[i].nz);
     }
     free(nd);
   }
 }
 
 /**
- * Pseudo-random numbers normally distributed
+ * Pseudo-random numbers normally distributed at 64bit
  *
  * @mu Mean of the distribution
  * @sd Standard deviation of the distribution
  */
 static inline double rnorm(double mu, double sd) {
-   unsigned long u, v, m = (1 << 16) - 1;
-   double a, b, s;
-   u = arc4random();
-   v = (((u >> 16) & m) | ((u & m) << 16));
-   m = ~(1 << 31);
-   u &= m;
-   v &= m;
-   a = ldexp((double) u, -30) - 1.0;
-   s = a * a;
-   b = ldexp((double) v, -30) - 1.0;
-   s += b * b * (1.0 - s);
-   s = -2.0 * log(s) / s;
-   a = b * sqrtf(s);
-   return mu + sd * a;
+  uint64_t u, v;
+  double a, b, s;
+  u = v = arc4random();
+  u <<= 32ULL;
+  u |= arc4random();
+  v |= (u << 32ULL);
+  a = ldexp((double) u, -63) - 1.0;
+  b = ldexp((double) v, -63) - 1.0;
+  s = a * a;
+  s += b * b * (1.0 - s);
+  s = -2.0 * log(s) / s;
+  a = b * sqrtf(s);
+  return mu + sd * a;
 }
 
 /**
@@ -194,8 +197,8 @@ static inline double rsplit(data *dt, size_t n, size_t min_leaf, size_t *cnt) {
   if (__builtin_expect(dt != NULL, 1)) {
     qsort(dt, n, sizeof(data), cmp_prj);
     rs = rtriang((double) (n >> 1), 0.5 * (double) (n - (min_leaf << 1)));
-    a = rs - floor(rs);
-    *cnt = (size_t) ceil(rs);
+    a = rs - floor(rs);        /* Triangular distribution is better for */
+    *cnt = (size_t) ceil(rs);  /* generating randomly balanced trees */
     rs = dt[(size_t) floor(rs)].pj * (1.0 - a) + dt[*cnt].pj * a;
   }
   return rs;
@@ -268,7 +271,6 @@ static inline data * cpdt(size_t n, double *X, size_t dx, double *Y, size_t dy, 
  */
 extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_t depth, size_t min_leaf)  {
   size_t i, cnt;
-  double inv = 1.0;
   if (__builtin_expect(dt && root, 1)) {
     if (__builtin_expect(n >= (min_leaf << 1) && depth > 0, 0)) { /* Split further */
       root->prj = rproj(dx); /* Random projection */
@@ -282,24 +284,40 @@ extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_
     }
     else { /* Make a terminal node */
       root->pred = (double *) calloc(dy, sizeof(double));
-      if (__builtin_expect(root->pred != NULL, 1)) {
+      root->se = (double *) calloc(dy, sizeof(double));
+      root->nz = (size_t *) calloc(dy, sizeof(size_t));
+      if (__builtin_expect(root->pred && root->se && root->nz, 1)) {
         for (cnt = 0; cnt < n; cnt++) {
 	  for (i = 0; i < dy; i++) {
-	    root->pred[i] += dt[cnt].y[i];
+	    if (__builtin_expect(isfinite(dt[cnt].y[i]), 1)) { 
+	      root->pred[i] += dt[cnt].y[i];
+	      root->se[i] += dt[cnt].y[i] * dt[cnt].y[i];
+	      root->nz[i]++;
+	    }
 	  }
         }
-        inv /= (double) n;
 #ifdef DEBUG
+#if DEBUG == 2
 	printf("Prd RTM: ");
 #endif
+#endif
         for (i = 0; i < dy; i++) {
-          root->pred[i] *= inv;
+          root->pred[i] /= root->nz[i];
+/* For the uncertainty assessment, suff. stats. for covariance matrix are also needed */
+	  root->se[i] += root->pred[i] * root->pred[i] * (double) root->nz[i];
+	  root->se[i] /= (double) (root->nz[i] - (size_t) (root->nz[i] > 1));
+	  root->se[i] = sqrt(root->se[i]); 
 #ifdef DEBUG
-	  printf("%s%.2f ", root->pred[i] >= 0.0 ? " " : "", root->pred[i]);
+#if DEBUG == 2
+	  printf("%s%.2f (%.2f|%lu) ", root->pred[i] >= 0.0 ? " " : "", \
+			  root->pred[i], root->se[i], root->nz[i]);
+#endif
 #endif
         }
 #ifdef DEBUG
+#if DEBUG == 2
 	printf("\n");
+#endif
 #endif
       }
     }
@@ -319,11 +337,12 @@ extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_
 extern void rf_predict(node *root, size_t nt, data *dt, size_t n, size_t dx, size_t dy) {
   size_t t, i, j;
   double pj;
-  double invnt = 1.0 / (double) (nt > 0 ? nt : 1.0);
+  double invnt;/* = 1.0 / (double) (nt > 0 ? nt : 1.0);*/
   node *T;
   if (__builtin_expect(root && dt, 1)) {
     for (i = 0; i < n; i++) {
       memset(dt[i].y, 0, dy * sizeof(double));
+      invnt = 0.0;
       for (t = 0; t < nt; t++) {
         T = &root[t];
         while (__builtin_expect(T->nl > 0, 1)) {
@@ -331,11 +350,14 @@ extern void rf_predict(node *root, size_t nt, data *dt, size_t n, size_t dx, siz
 	  T = pj <= T->spl ? &T->lf[0] : &T->lf[1];
         }
 	if (__builtin_expect(T->pred != NULL, 1)) {
-	  for (j = 0; j < dy; j++) {
-	    dt[i].y[j] += T->pred[j];
-	  }
+	  pj = 0.0;
+	  for (j = 0; j < dy; j++) pj = fmax(pj, T->se[j]);
+	  pj = 1.0 / (pj * pj);
+	  invnt += pj;
+	  for (j = 0; j < dy; j++) dt[i].y[j] += T->pred[j] * pj;
 	}
       }
+      invnt = 1.0 / invnt;
       for (j = 0; j < dy; j++) dt[i].y[j] *= invnt;
     }
   }
@@ -346,7 +368,8 @@ int main(void) {
   size_t const D = 3;
   size_t const K = 24;
   size_t const N = 7;
-  size_t const ML = 3;
+  size_t const ML = 2;
+  size_t const NT = 20;
   size_t i, j;
   double Y[] = {0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0};
   double X[] = {-1.080221, 2.13662, -0.4679458, 0.1231624, -0.2964475, -0.1006749, -0.6403836, -0.2791455, 1.111347, 1.156517, 1.703992, 0.653971, 1.222196, -0.4262778, 1.374594, 0.4969235, -1.120565, 1.819362, -0.3283002, -0.4837726, -1.248508};
@@ -385,32 +408,34 @@ int main(void) {
       printf("Rnd SPL: %f\n", rsp);
       /* Building random tree for test */
       printf("\n");
-      roots = alloc_nodes(D);
+      roots = alloc_nodes(NT);
       if (roots) {
-	for (i = 0; i < D; i++) { /* This loop builds a forest */
+	for (i = 0; i < NT; i++) { /* This loop builds a forest */
           rnd_tree(&roots[i], dt, N, D, D, K, ML);
+#if DEBUG == 2
 	  printf("\n");
+#endif
 	}
 	/* Testing random forest predictions */
 	printf("Before predicting\n");
 	for (i = 0; i < N; i++) {
 	  printf("Prd (%lu): ", i);
 	  for (j = 0; j < D; j++) {
-	    printf("%s%.2f ", dt[i].y[j] >= 0.0 ? " " : "", dt[i].y[j]);
+	    printf("%s%.3f ", dt[i].y[j] >= 0.0 ? " " : "", dt[i].y[j]);
 	  }
 	  printf("\n");
 	}
-        rf_predict(roots, D, dt, N, D, D);
+        rf_predict(roots, NT, dt, N, D, D);
 	printf("After predicting\n");
 	for (i = 0; i < N; i++) {
 	  printf("Prd (%lu): ", i);
 	  for (j = 0; j < D; j++) {
-	    printf("%s%.2f ", dt[i].y[j] >= 0.0 ? " " : "", dt[i].y[j]);
+	    printf("%s%.3f ", dt[i].y[j] >= 0.0 ? " " : "", dt[i].y[j]);
 	  }
 	  printf("\n");
 	}
       }
-      if (roots) free_root(roots, D);
+      if (roots) free_root(roots, NT);
     }
     if (dt) free_data(dt, N);
   }
