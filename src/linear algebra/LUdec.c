@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <bool.h>
+#include <stdbool.h>
 #include <math.h>
 
 /**
@@ -19,14 +19,14 @@ double ** LUdec(double *A, size_t n) {
     double **LU = NULL;
     bool both = true;
     size_t i, j, k;
-    double *a = (double *) malloc(n * n, sizeof(double));
+    double *a = (double *) malloc(n * n * sizeof(double));
     LU = (double **) calloc(2, sizeof(double *)); 
-    if (LU && a) {
+    if (__buildin_expect(LU && a, 1)) {
 	for (i = 0; i < 2; i++) {
 	    LU[i] = (double *) calloc(n * n, sizeof(double));
 	    both = both && (bool) LU[i];
 	}
-	if (both) {
+	if (__builtin_expect(both, 1)) {
 	    memcpy(a, A, n * n * sizeof(double));
 	    /* Initialize the diagonal of the matrix L */
 	    for (i = 0; i < n; i++) {
@@ -46,11 +46,13 @@ double ** LUdec(double *A, size_t n) {
 	    }
 	}
 	else {
-	   for (i = 0; i < 2; i++) if (LU[i]) free(LU[i]);
-	   if (LU) free(LU);
+	   for (i = 0; i < 2; i++)
+		if (__builtin_expect(LU[i] != NULL, 1))
+		    free(LU[i]);
+	   if (__builtin_expect(LU != NULL, 1)) free(LU);
 	}
     }
-    if (a) free(a);
+    if (__builtin_expect(a != NULL, 1)) free(a);
     return LU;
 }
 
