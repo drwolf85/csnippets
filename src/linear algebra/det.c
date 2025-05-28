@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <string.h>
+#include <stdbool.h>
+#include <math.h>
 /**
  * @brief Determinant of a 2x2 matrix
  *
@@ -62,6 +64,91 @@ double det_nxn(double *A, unsigned n) {
     return res;
 }
 
+/**
+ * @brief LU decomposition
+ *
+ * @param A Pointer to a matrix stored in column-major format
+ * @param n Number of columns (or rows) in matrix `A`
+ *
+ * @return The pointers to the Lower and Upper matrices
+ */
+static inline double ** LUdec(double *A, size_t n) {
+    double **LU = NULL;
+    bool both = true;
+    size_t i, j, k;
+    double *a = (double *) malloc(n * n * sizeof(double));
+    LU = (double **) calloc(2, sizeof(double *)); 
+    if (__builtin_expect(LU && a, 1)) {
+	for (i = 0; i < 2; i++) {
+	    LU[i] = (double *) calloc(n * n, sizeof(double));
+	    both = both && (bool) LU[i];
+	}
+	if (__builtin_expect(both, 1)) {
+	    memcpy(a, A, n * n * sizeof(double));
+	    /* Initialize the diagonal of the matrix L */
+	    for (i = 0; i < n; i++) {
+		LU[0][i * (n + 1)] = 1.0;
+	    }
+	    for (k = 0; k < n; k++) {
+		LU[1][k * (n + 1)] = a[k * (n + 1)]; /* Compute the pivots (diagonal of U) */
+		for (i = k + 1; i < n; i++) { /* Gaussian elimination */
+		    LU[0][k * n + i] = a[k * n + i] / a[k * (n + 1)];
+		    LU[1][i * n + k] = a[i * n + k];
+		}
+		for (i = k + 1; i < n; i++) { /* Compute the Schur complement */
+		    for (j = k + 1; j < n; j++) {
+			a[j * n + i] -= LU[0][n * k + i] * LU[1][n * j + k];
+		    }
+		}
+	    }
+	}
+	else {
+	   for (i = 0; i < 2; i++)
+		if (__builtin_expect(LU[i] != NULL, 1))
+		    free(LU[i]);
+	   if (__builtin_expect(LU != NULL, 1)) free(LU);
+	}
+    }
+    if (__builtin_expect(a != NULL, 1)) free(a);
+    return LU;
+}
+
+extern double det(double *A, unsigned n) {
+    unsigned i;
+    double res = nan("");
+    double **lu = LUdec(A, (size_t) n);
+    if (__builtin_expect(lu != NULL, 1)) {
+	if (__builtin_expect(lu[1] && n > 0, 1)) {
+	    res = lu[1][0];
+	    for (i = 1; i < n; i++) {
+		res *= lu[1][i * (n + 1)];
+	    }
+	}
+        if (__builtin_expect(lu[0] != NULL, 1)) free(lu[0]);
+        if (__builtin_expect(lu[1] != NULL, 1)) free(lu[1]);
+	free(lu);
+    }
+    return res;
+}
+
+extern double logdet(double *A, unsigned n) {
+    unsigned i;
+    double res = nan("");
+    double **lu = LUdec(A, (size_t) n);
+    if (__builtin_expect(lu != NULL, 1)) {
+	if (__builtin_expect(lu[1] && n > 0, 1)) {
+	    res = lu[1][0];
+	    for (i = 1; i < n; i++) {
+		res *= lu[1][i * (n + 1)];
+	    }
+	}
+        if (__builtin_expect(lu[0] != NULL, 1)) free(lu[0]);
+        if (__builtin_expect(lu[1] != NULL, 1)) free(lu[1]);
+	free(lu);
+    }
+    return log(res);
+}
+
 #ifdef DEBUG
 int main() {
 	double my2x2[] = {1.0, 2.0, \
@@ -74,7 +161,10 @@ int main() {
 	printf("Det. test (2x2): %g\n", det_2x2(my2x2));
 	printf("Det. test (3x3): %g\n", det_3x3(my3x3));
 	printf("Det. test (7x7): %.9f\n", det_nxn(my7x7, 7UL));
-	printf("Det. test (10x10): %.9f\n", det_nxn(my10x10, 10UL));
+	/* printf("Det. test (10x10): %.9f\n", det_nxn(my10x10, 10UL)); */
+	printf("Det. test (10x10): %.9f\n", det(my10x10, 10UL));
+	printf("Log-Det. test (10x10): %.9f\n", logdet(my10x10, 10UL));
+
 	return 0;
 }
 #endif
