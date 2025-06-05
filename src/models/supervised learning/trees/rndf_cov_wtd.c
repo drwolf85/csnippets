@@ -20,7 +20,7 @@ typedef struct node {
   size_t nl;
   struct node *lf;
   double *pred;
-  double *se;
+  double *cov;
   size_t *nz;
 } node;
 
@@ -49,11 +49,94 @@ static inline void free_root(node *nd, size_t n_nodes) {
       if (__builtin_expect(nd[i].prj != NULL, 1)) free(nd[i].prj);
       if (__builtin_expect(nd[i].lf != NULL, 1)) free_root(nd[i].lf, nd[i].nl);
       if (__builtin_expect(nd[i].pred != NULL, 1)) free(nd[i].pred);
-      if (__builtin_expect(nd[i].se != NULL, 1)) free(nd[i].se);
+      if (__builtin_expect(nd[i].cov != NULL, 1)) free(nd[i].cov);
       if (__builtin_expect(nd[i].nz != NULL, 1)) free(nd[i].nz);
     }
     free(nd);
   }
+}
+
+/**
+ * @brief LU decomposition (for determinant computation)
+ *
+ * @param A Pointer to a matrix stored in column-major format
+ * @param n Number of columns (or rows) in matrix `A`
+ *
+ * @return The pointers to the Lower and Upper matrices
+ */
+double ** LUdec(double *A, size_t n) {
+    double **LU = NULL;
+    double tmp;
+    bool both = true;
+    size_t i, j, k;
+    double *a = (double *) malloc(n * n * sizeof(double));
+    LU = (double **) calloc(2, sizeof(double *));
+    if (__builtin_expect(LU && a, 1)) {
+        for (i = 0; i < 2; i++) {
+            LU[i] = (double *) calloc(n * n, sizeof(double));
+            both = both && (bool) LU[i];
+        }
+        if (__builtin_expect(both, 1)) {
+            memcpy(a, A, n * n * sizeof(double));
+            /* Initialize the diagonal of the matrix L */
+            for (i = 0; i < n; i++) {
+                LU[0][i * (n + 1)] = 1.0;
+            }
+            for (k = 0; k < n; k++) {
+		tmp = a[k * (n + 1)]; /* Compute the pivots (diagonal of U) */
+                LU[1][k * (n + 1)] = tmp;
+		if (__builtin_expect(tmp == 0.0, 0)) break;
+                for (i = k + 1; i < n; i++) { /* Gaussian elimination */
+                    LU[0][k * n + i] = a[k * n + i] / tmp;
+                    LU[1][i * n + k] = a[i * n + k];
+                }
+                for (i = k + 1; i < n; i++) { /* Compute the Schur complement */
+                    for (j = k + 1; j < n; j++) {
+                        a[j * n + i] -= LU[0][n * k + i] * LU[1][n * j + k];
+                    }
+                }
+            }
+#ifdef DEBUG
+#if DEBUG == 3
+	    for (i = 0; i < n; i++) {
+	      printf("%f ", LU[1][(n + 1) * i]);
+	    }
+	    printf("\n\n");
+#endif
+#endif
+        }
+        else {
+           for (i = 0; i < 2; i++) if (__builtin_expect(LU[i] != NULL, 1)) free(LU[i]);
+           if (__builtin_expect(LU != NULL, 1)) free(LU);
+        }
+    }
+    if (__builtin_expect(a != NULL, 1)) free(a);
+    return LU;
+}
+
+/**
+ * Compute the determinant of A via LU decomposition
+ *
+ * @param A Pointer to a symmetric matrix 
+ * @param n Number of columns (and rows) in matrix `A`
+ *
+ * @return double
+ */
+double det(double *A, size_t n) {
+  size_t i;
+  double **LU = LUdec(A, n);
+  double res = 1.0; /* This default value is set to avoid issue when used in divisions */
+  if (__builtin_expect(LU != NULL, 1)) {
+    if (__builtin_expect(LU[0] && LU[1], 1)) for (i = 0; i < n; i++) {
+      res *= LU[1][(n + 1) * i];
+    }
+  }
+  if (__builtin_expect(LU != NULL, 1)) {
+    if (__builtin_expect(LU[0] != NULL, 1)) free(LU[0]);
+    if (__builtin_expect(LU[1] != NULL, 1)) free(LU[1]);
+    free(LU);
+  }
+  return res;
 }
 
 /**
@@ -194,11 +277,11 @@ static inline double rtriang(double mu, double sd) {
  */
 static inline double rsplit(data *dt, size_t n, size_t min_leaf, size_t *cnt) {
   double a, rs = nan("");
-  if (__builtin_expect(dt != NULL, 1)) {
+  if (__builtin_expect(dt && (min_leaf << 1) <= n, 1)) {
     qsort(dt, n, sizeof(data), cmp_prj);
     rs = rtriang((double) (n >> 1), 0.5 * (double) (n - (min_leaf << 1)));
     a = rs - floor(rs);        /* Triangular distribution is better for */
-    *cnt = (size_t) ceil(rs);  /* generating randomly balanced trees */
+    *cnt = (size_t) fmin(ceil(rs), (double) n);  /* generating randomly balanced trees */
     rs = dt[(size_t) floor(rs)].pj * (1.0 - a) + dt[*cnt].pj * a;
   }
   return rs;
@@ -268,10 +351,11 @@ static inline data * cpdt(size_t n, double *X, size_t dx, double *Y, size_t dy, 
  * @param dy Number of features in output
  * @param depth Depth of the node in the tree (NB: leaves have zero depth)
  * @param min_leaf Minimum number in a terminal node
+ * @param lambda Curvature regularization parameter (as in Levenberg's algorithm)
  */
-extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_t depth, size_t min_leaf)  {
-  size_t i, cnt;
-  if (__builtin_expect(dt && root, 1)) {
+extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_t depth, size_t min_leaf, double lambda)  {
+  size_t i, j, cnt, pos, sop;
+  if (__builtin_expect(dt && root && n > 0 && min_leaf > 0 && dx > 0 && dy > 0 && lambda > 0.0, 1)) {
     if (__builtin_expect(n >= (min_leaf << 1) && depth > 0, 0)) { /* Split further */
       root->prj = rproj(dx); /* Random projection */
       proj1d(dt, root->prj, n, dx);
@@ -279,20 +363,31 @@ extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_
       root->nl = 2;
       root->lf = alloc_nodes(root->nl);
       depth--; /* Perform the "churn of the data" */
-      rnd_tree(&root->lf[0], dt, cnt, dx, dy, depth, min_leaf);
-      rnd_tree(&root->lf[1], &dt[cnt], n - cnt, dx, dy, depth, min_leaf);
+      rnd_tree(&root->lf[0], dt, cnt, dx, dy, depth, min_leaf, lambda);
+      rnd_tree(&root->lf[1], &dt[cnt], n - cnt, dx, dy, depth, min_leaf, lambda);
     }
     else { /* Make a terminal node */
       root->pred = (double *) calloc(dy, sizeof(double));
-      root->se = (double *) calloc(dy, sizeof(double));
-      root->nz = (size_t *) calloc(dy, sizeof(size_t));
-      if (__builtin_expect(root->pred && root->se && root->nz, 1)) {
+      root->cov = (double *) calloc(dy * dy, sizeof(double));
+      root->nz = (size_t *) calloc(dy * dy, sizeof(size_t));
+      if (__builtin_expect(root->pred && root->cov && root->nz, 1)) {
         for (cnt = 0; cnt < n; cnt++) {
 	  for (i = 0; i < dy; i++) {
 	    if (__builtin_expect(isfinite(dt[cnt].y[i]), 1)) { 
 	      root->pred[i] += dt[cnt].y[i];
-	      root->se[i] += dt[cnt].y[i] * dt[cnt].y[i];
-	      root->nz[i]++;
+	      pos = (dy + 1) * i;
+	      root->cov[pos] += dt[cnt].y[i] * dt[cnt].y[i];
+	      root->nz[pos]++;
+	      for (j = i + 1; j < dy; j++) {
+		if (__builtin_expect(isfinite(dt[cnt].y[j]), 1)) {
+		  pos = dy * i + j;
+		  sop = dy * j + i;
+	      	  root->cov[pos] += dt[cnt].y[i] * dt[cnt].y[j];
+		  root->cov[sop] = root->cov[pos];
+		  root->nz[pos]++;
+	      	  root->nz[sop] = root->nz[pos];
+		}
+	      }
 	    }
 	  }
         }
@@ -302,17 +397,26 @@ extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_
 #endif
 #endif
         for (i = 0; i < dy; i++) {
-          root->pred[i] /= root->nz[i];
-/* For the uncertainty assessment, suff. stats. for covariance matrix are also needed */
-	  root->se[i] += root->pred[i] * root->pred[i] * (double) root->nz[i];
-	  root->se[i] /= (double) (root->nz[i] - (size_t) (root->nz[i] > 1));
-	  root->se[i] = sqrt(root->se[i]); 
+	  pos = i * (dy + 1);
+          root->pred[i] /= root->nz[pos];
+	  root->cov[pos] -= root->pred[i] * root->pred[i] * (double) root->nz[pos];
+	  root->cov[pos] /= (double) (root->nz[pos] - (size_t) (root->nz[pos] > 1));
+	  /* Regularization term to avoid possible singularity issues */
+	  root->cov[pos] += lambda;
+
 #ifdef DEBUG
 #if DEBUG == 2
 	  printf("%s%.2f (%.2f|%lu) ", root->pred[i] >= 0.0 ? " " : "", \
-			  root->pred[i], root->se[i], root->nz[i]);
+			  root->pred[i], root->cov[pos], root->nz[pos]);
 #endif
 #endif
+	  for (j = 0; j < i; j++) {
+	    pos = dy * i + j;
+	    sop = dy * j + i;
+	    root->cov[pos] -= root->pred[i] * root->pred[j] * (double) root->nz[pos];
+	    root->cov[pos] /= (double) (root->nz[pos] - (size_t) (root->nz[pos] > 1));
+	    root->cov[sop] = root->cov[pos];
+	  }
         }
 #ifdef DEBUG
 #if DEBUG == 2
@@ -349,10 +453,25 @@ extern void rf_predict(node *root, size_t nt, data *dt, size_t n, size_t dx, siz
 	  pj = proj2dbl(&dt[i], T->prj, dx);
 	  T = pj <= T->spl ? &T->lf[0] : &T->lf[1];
         }
-	if (__builtin_expect(T->pred && T->se, 1)) {
-	  pj = 0.0;
-	  for (j = 0; j < dy; j++) pj = fmax(pj, T->se[j]);
-	  pj = 1.0 / (pj * pj);
+	if (__builtin_expect(T->pred && T->cov, 1)) {
+#ifdef DEBUG
+#if DEBUG == 3
+	  for (j = 0; j < dy * dy; j++) {
+            printf("%f ", T->cov[j]);
+	    if ((j + 1) % dy == 0) printf("\n");
+	  }
+	  printf("\n");
+#endif
+#endif
+	  pj = det(T->cov, dy);
+	  /* If the determinant is not finite then process the next tree model */
+	  if (__builtin_expect(!isfinite(pj), 0)) continue;
+	  /* If covariance matrix is not positive definite, use max of its diag. */
+	  if (__builtin_expect(pj <= 0.0, 0)) {
+	    pj = 0.0;
+	    for (j = 0; j < dy; j++) pj = fmax(pj, T->cov[j * (dy + 1)]);
+	  }
+	  pj = 1.0 / pj;
 	  invnt += pj;
 	  for (j = 0; j < dy; j++) dt[i].y[j] += T->pred[j] * pj;
 	}
@@ -366,10 +485,10 @@ extern void rf_predict(node *root, size_t nt, data *dt, size_t n, size_t dx, siz
 #ifdef DEBUG
 int main(void) {
   size_t const D = 3;
-  size_t const K = 24;
+  size_t const K = 20;
   size_t const N = 7;
   size_t const ML = 2;
-  size_t const NT = 20;
+  size_t const NT = 10000;
   size_t i, j;
   double Y[] = {0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0};
   double X[] = {-1.080221, 2.13662, -0.4679458, 0.1231624, -0.2964475, -0.1006749, -0.6403836, -0.2791455, 1.111347, 1.156517, 1.703992, 0.653971, 1.222196, -0.4262778, 1.374594, 0.4969235, -1.120565, 1.819362, -0.3283002, -0.4837726, -1.248508};
@@ -411,7 +530,7 @@ int main(void) {
       roots = alloc_nodes(NT);
       if (roots) {
 	for (i = 0; i < NT; i++) { /* This loop builds a forest */
-          rnd_tree(&roots[i], dt, N, D, D, K, ML);
+          rnd_tree(&roots[i], dt, N, D, D, K, ML, 0.001);
 #if DEBUG == 2
 	  printf("\n");
 #endif
