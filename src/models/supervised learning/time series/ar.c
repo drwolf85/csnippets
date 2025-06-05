@@ -127,7 +127,7 @@ estim * fit_ar(double *x, int n, int p) {
 }
 
 #ifdef DEBUG
-void main() {
+int main(void) {
     int i;
     int const N = 9;
     int const P = 3;
@@ -170,5 +170,6 @@ void main() {
     free(res);
     free(X);
     free(y);
+    return 0;
 }
 #endif

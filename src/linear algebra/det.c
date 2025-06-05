@@ -76,6 +76,7 @@ static inline double ** LUdec(double *A, size_t n) {
     double **LU = NULL;
     bool both = true;
     size_t i, j, k;
+    double tmp;
     double *a = (double *) malloc(n * n * sizeof(double));
     LU = (double **) calloc(2, sizeof(double *)); 
     if (__builtin_expect(LU && a, 1)) {
@@ -90,7 +91,9 @@ static inline double ** LUdec(double *A, size_t n) {
 		LU[0][i * (n + 1)] = 1.0;
 	    }
 	    for (k = 0; k < n; k++) {
-		LU[1][k * (n + 1)] = a[k * (n + 1)]; /* Compute the pivots (diagonal of U) */
+		tmp = a[k * (n + 1)]; /* Compute the pivots (diagonal of U) */
+		LU[1][k * (n + 1)] = tmp;
+		if (__builtin_expect(tmp == 0.0, 0)) break;
 		for (i = k + 1; i < n; i++) { /* Gaussian elimination */
 		    LU[0][k * n + i] = a[k * n + i] / a[k * (n + 1)];
 		    LU[1][i * n + k] = a[i * n + k];

@@ -62,7 +62,7 @@ double mecdf(double *x, double *dta, size_t n, size_t p) {
     char tmp;
     long long mnpos, pos[p];
     size_t i, j, whv;
-    double res = 0.0;
+    size_t res = 0;
     /* Copy the data in a structure to sort */ /** 
      *      NOTE: do this step outside the function to
      *            enhance performances! */
@@ -80,19 +80,19 @@ double mecdf(double *x, double *dta, size_t n, size_t p) {
          *        outside the function to enhance 
          *        performances */
         qsort(v[j], n, sizeof(values), cmp_vals);
-    }
+    // }
     // for (j = 0; j < p; j++) {
     //     for (i = 0; i < n; i++) {
     //         printf("%f [%lu] - ", v[j][i].x, v[j][i].i);
     //     }
     //     printf("\n\n");
     // }
-    /* Sort with indices and search */
-    for (j = 0; j < p; j++) {
-        /** NOTE: Also the sorting should happen 
-         *        outside the function to enhance 
-         *        performances */
-        qsort(v[j], n, sizeof(values), cmp_vals);
+    // /* Sort with indices and search */
+    // for (j = 0; j < p; j++) {
+    //    /** NOTE: Also the sorting should happen 
+    //     *        outside the function to enhance 
+    //     *        performances */
+    //    qsort(v[j], n, sizeof(values), cmp_vals);
         /* If the function receives the sorted structure as an input
            The binary search is the first step to perform */
         pos[j] = binary_search(x[j], v[j], n);
@@ -105,14 +105,15 @@ double mecdf(double *x, double *dta, size_t n, size_t p) {
         mnpos += (mnpos > pos[j]) * (pos[j] - mnpos);
     }
     /* Estimation of the function */
+    #pragma omp parallel for private(i, tmp, j) reduction(+ : res)
     for (i = 0; (long long) i <= mnpos; i++) {
         tmp = 1;
         for (j = 0; j < p && tmp; j++) {
             tmp &= (dta[j * n + v[whv][i].i] <= x[j]);
         }
-        res += (double) tmp;
+        res += (size_t) tmp;
     }
-    return res / n;
+    return (double) res / (double) n;
 }
 
 /* Test function */
