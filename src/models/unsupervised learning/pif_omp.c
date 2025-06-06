@@ -8,10 +8,11 @@
 #include <math.h>
 #include <omp.h>
 
-#define arc64rnd (((uint64_t) arc4random() << 32ULL) | (uint64_t) arc4random())
-
 void *dt; /* Global pointer for storing a generic structured or unstructured dataset */
 double *H; /* Pointer to store normalizing factors */
+struct random_data rnd_data; /* Structure for seeding PRNG */
+char *statebuf;
+#pragma omp threadprivate(rnd_data, statebuf)
 
 typedef struct node {
 	void *proto;
@@ -30,6 +31,15 @@ typedef struct dblvec {
 
 dblvec *idx;
 #pragma omp threadprivate(idx)
+
+static inline uint64_t arc64rnd(void) {
+	int32_t u, v;
+	int64_t r;
+	random_r(&rnd_data, &u);
+	random_r(&rnd_data, &v);
+	r = (((int64_t) u << 32ULL) ^ (int64_t) v);
+	return *(uint64_t *) &r; 
+}
 
 /**
  * @brief Normalizing factors (i.e., vector of harmonic numbers)
@@ -82,7 +92,7 @@ static void free_node(node *n, uint64_t nt) {
  * @return double
  */
 static inline double runif(double a, double b) {
-	uint64_t u = arc64rnd;
+	uint64_t u = arc64rnd();
 	double const mn = fmin(a, b);
 	double const mx = fmax(a, b);
 	return mn + ldexp((double) u, -64) * (mx - mn);
@@ -127,7 +137,7 @@ static void pit_sp(node *nd, uint64_t dtsz, dblvec *idx,
 		else {
 			nd->type = true;
 			nd->dep = k;
-			whp = arc64rnd % n;
+			whp = arc64rnd() % n;
 			nd->proto = (void *) &((uint8_t *) dt)[idx[whp].i * dtsz];
 			for (i = 0; i < n; i++)
 				idx[i].v = ds(&((uint8_t *) dt)[idx[i].i * dtsz], nd->proto);
@@ -171,18 +181,24 @@ static inline node * train_pif_sp(uint64_t nt, uint64_t dtsz,
 	node *roots = (node *) calloc(nt, sizeof(node));
 	#pragma omp parallel 
 	{
+		rnd_data.state = NULL;
+		statebuf = (char *) calloc(256, sizeof(char));
+		if (__builtin_expect(statebuf != NULL, 1))
+			initstate_r(arc4random() ^ omp_get_thread_num(), \
+				    statebuf, sizeof(char) * 256, &rnd_data);
 		idx = (dblvec *) calloc(subs, sizeof(dblvec));
 	}
-	if (__builtin_expect(roots && idx, 1)) {
+	if (__builtin_expect(roots && idx && statebuf, 1)) {
 		#pragma omp parallel for default(shared) private(i, j)
 		for (i = 0; i < nt; i++) {
 			for (j = 0; j < subs; j++)  /* Subsampling with replacement */
-				idx[j].i = arc64rnd % n;
+				idx[j].i = arc64rnd() % n;
 			pit_sp(&roots[i], dtsz, idx, subs, 0, l, ds);
 		}
 	}
 	#pragma omp parallel
 	{
+		if (__builtin_expect(statebuf != NULL, 1)) free(statebuf);
 		if (__builtin_expect(idx != NULL, 1)) free(idx);
 	}
 	return roots;
@@ -269,7 +285,7 @@ extern double * pif_one(uint64_t n, void *info_dat, uint64_t size_dat,
 				H[i] = H[i - 1] + 1.0 / (1.0 + (double) i);
 			forest = train_pif_sp(nt, size_dat, n, nss, l, ds);
 			if (__builtin_expect(forest != NULL, 1)) {
-				#pragma omp parallel for default(shared) private(i)
+				#pragma omp parallel for
 				for (i = 0; i < n; i++)
 					res[i] = fuzzy_anomaly_score(i, \
 						size_dat, forest, nt, nss, ds);
@@ -311,10 +327,15 @@ int main(void) {
 	uint64_t i, j;
 	double *scores;
 	double *dataset = malloc(N * D * sizeof(double));
-	if (__builtin_expect(dataset != NULL, 1)) {
+	statebuf = (char *) calloc(256, sizeof(char));
+	rnd_data.state = NULL;
+	if (__builtin_expect(statebuf && dataset, 1)) {
+		initstate_r(arc4random(), statebuf, \
+			    sizeof(char) * 256, &rnd_data);
 		for (j = 0, i = 0; i < NOFF * D; i++) ((double *) dataset)[i] = runif(-20.0, 20.0);
 		for (j = i, i = 0; i < NGR1 * D; i++, j++) ((double *) dataset)[j] = runif(0.5, 1.0);
 		for (i = 0; i < NGR2 * D; i++, j++) ((double *) dataset)[j] = runif(-1.0, -0.5);
+		if (__builtin_expect(statebuf != NULL, 1)) free(statebuf);
 		scores = pif_one(N, dataset, sizeof(double) * D, NT, NSS, TDEP, mydiss);
 		if (__builtin_expect(scores != NULL, 1)) {
 			for (i = 0; i < N; i++) {

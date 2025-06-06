@@ -9,7 +9,6 @@
 #include <omp.h>
 
 #define THRESHOLD 0.5
-#define arc64rnd_def (((uint64_t) arc4random() << 32ULL) | (uint64_t) arc4random())
 
 void *dt; /* Global pointer for storing a generic structured or unstructured dataset */
 double *H; /* Pointer to store normalizing factors */
@@ -42,7 +41,7 @@ static inline uint64_t arc64rnd(void) {
 	int64_t r;
 	random_r(&rnd_data, &u);
 	random_r(&rnd_data, &v);
-	r =(((int64_t) u << 32ULL) ^ (int64_t) v);
+	r = (((int64_t) u << 32ULL) ^ (int64_t) v);
 	return *(uint64_t *) &r; 
 }
 
@@ -200,7 +199,7 @@ static inline node * train_pif_tp(uint64_t nt, uint64_t dtsz,
 				    statebuf, sizeof(char) * 256, &rnd_data);
 		idx = (dblvec *) calloc(subs, sizeof(dblvec));
 	}
-	if (__builtin_expect(roots && idx, 1)) {
+	if (__builtin_expect(roots && idx && statebuf, 1)) {
 		#pragma omp parallel for default(shared) private(i, j)
 		for (i = 0; i < nt; i++) {
 			for (j = 0; j < subs; j++)  /* Subsampling with replacement */
@@ -336,12 +335,12 @@ double mydiss(void const *aa, void const *bb) {
 	return res;
 }
 
-#define NOFF 50
-#define NGR1 350
-#define NGR2 500
+#define NOFF 150
+#define NGR1 1350
+#define NGR2 1500
 #define N (NOFF + NGR1 + NGR2)
 
-#define NT 50
+#define NT 500
 #define NSS 30
 #define TDEP 4
 
@@ -349,8 +348,8 @@ int main(void) {
 	uint64_t i, j;
 	double *scores;
 	double *dataset = malloc(N * D * sizeof(double));
-	rnd_data.state = NULL;
 	statebuf = (char *) calloc(256, sizeof(char));
+	rnd_data.state = NULL;
 	if (__builtin_expect(statebuf && dataset, 1)) {
 		initstate_r(arc4random(), statebuf, \
 			    sizeof(char) * 256, &rnd_data);
