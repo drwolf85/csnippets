@@ -8,6 +8,7 @@
 typedef struct data {
   double *x;
   size_t dx;
+  double w;
   double *y;
   double *s;
   size_t dy;
@@ -23,6 +24,7 @@ typedef struct node {
   double *pred;
   double *se;
   size_t *nz;
+  double *sw;
 } node;
 
 /**
@@ -52,6 +54,7 @@ static inline void free_root(node *nd, size_t n_nodes) {
       if (__builtin_expect(nd[i].pred != NULL, 1)) free(nd[i].pred);
       if (__builtin_expect(nd[i].se != NULL, 1)) free(nd[i].se);
       if (__builtin_expect(nd[i].nz != NULL, 1)) free(nd[i].nz);
+      if (__builtin_expect(nd[i].sw != NULL, 1)) free(nd[i].sw);
     }
     free(nd);
   }
@@ -163,7 +166,7 @@ static int cmp_prj(void const *aa, void const *bb) {
   return 2 * (a.pj > b.pj) - 1;
 }
 
-/**
+/*t*
  * Generate a pseudo-random number from a triangular distribution 
  *
  * @param mu location parameter of the triangular distribution
@@ -226,6 +229,7 @@ static inline void free_data(data *dt, size_t n) {
 /**
  * Copy data into their proper data structure
  *
+ * @param wt Pointer to a vector of weights
  * @param n Number of data points to train a random forest model
  * @param X Pointer to the input data
  * @param dx Number of variables/features in input
@@ -236,14 +240,15 @@ static inline void free_data(data *dt, size_t n) {
  *
  * @return Pointer to a data structure of well-organized data
  */
-static inline data * cpdt(size_t n, double *X, size_t dx, double *Y, size_t dy, bool cmf) {
+static inline data * cpdt(double *wt, size_t n, double *X, size_t dx, double *Y, size_t dy, bool cmf) {
   size_t i, j, nc = 0;
   data *dt = calloc(n, sizeof(data));
-  if (__builtin_expect(dt && X && Y, 1)) {
+  if (__builtin_expect(dt && wt && X && Y, 1)) {
     for (i = 0; i < n; i++) {
       dt[i].x = calloc(dx, sizeof(double));
       dt[i].y = calloc(dy, sizeof(double));
       dt[i].i = i;
+      dt[i].w = wt[i];
       if (dt[i].x && dt[i].y) { 
 	nc++;
 	if (cmf) {
@@ -288,13 +293,15 @@ extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_
       root->pred = (double *) calloc(dy, sizeof(double));
       root->se = (double *) calloc(dy, sizeof(double));
       root->nz = (size_t *) calloc(dy, sizeof(size_t));
-      if (__builtin_expect(root->pred && root->se && root->nz, 1)) {
+      root->sw = (double *) calloc(dy, sizeof(double));
+      if (__builtin_expect(root->pred && root->se && root->nz && root->sw, 1)) {
         for (cnt = 0; cnt < n; cnt++) {
 	  for (i = 0; i < dy; i++) {
 	    if (__builtin_expect(isfinite(dt[cnt].y[i]), 1)) { 
-	      root->pred[i] += dt[cnt].y[i];
-	      root->se[i] += dt[cnt].y[i] * dt[cnt].y[i];
+	      root->pred[i] += dt[cnt].y[i] * dt[cnt].w;
+	      root->se[i] += dt[cnt].y[i] * dt[cnt].y[i] * dt[cnt].w;
 	      root->nz[i]++;
+	      root->sw[i] += dt[cnt].w;
 	    }
 	  }
         }
@@ -304,13 +311,13 @@ extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_
 #endif
 #endif
         for (i = 0; i < dy; i++) {
-          root->pred[i] /= root->nz[i];
+          root->pred[i] /= root->sw[i];
 /* For the uncertainty assessment, suff. stats. for covariance matrix are also needed */
-	  root->se[i] -= root->pred[i] * root->pred[i] * (double) root->nz[i];
-	  root->se[i] /= (double) root->nz[i];
+	  root->se[i] -= root->pred[i] * root->pred[i] * (double) root->sw[i];
+	  root->se[i] /= root->sw[i];
 	  if (__builtin_expect(root->nz[i] > 0, 1))
 	  	root->se[i] *= (double) root->nz[i] / (double) (root->nz[i] - (size_t) (root->nz[i] > 1));
-	  root->se[i] = fabs(sqrt(fabs(root->se[i]))); 
+	  root->se[i] = fabs(sqrt(fabs(root->se[i])));
 #ifdef DEBUG
 #if DEBUG == 2
 	  printf("%s%.2f (%.2f|%lu) ", root->pred[i] >= 0.0 ? " " : "", \
@@ -346,7 +353,7 @@ extern void rf_predict(node *root, size_t nt, data *dt, size_t n, size_t dx, siz
   if (__builtin_expect(root && dt, 1)) {
     for (i = 0; i < n; i++) {
       dt[i].s = (double *) calloc(n, sizeof(double));
-      if (__builtin_expect(dt[i].s == NULL, 0)) continue;
+      if (__builtin_expect(!(dt[i].s && dt[i].y && dt[i].x), 0)) continue;
       memset(dt[i].y, 0, dy * sizeof(double));
       invnt = 0.0;
       for (t = 0; t < nt; t++) {
@@ -383,6 +390,7 @@ int main(void) {
   size_t const ML = 2;
   size_t const NT = 20;
   size_t i, j;
+  double wt[] = {0.1, 1.5, 1.2, 1.1, 0.1, 0.1, 1.3};
   double Y[] = {0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0};
   double X[] = {-1.080221, 2.13662, -0.4679458, 0.1231624, -0.2964475, -0.1006749, -0.6403836, -0.2791455, 1.111347, 1.156517, 1.703992, 0.653971, 1.222196, -0.4262778, 1.374594, 0.4969235, -1.120565, 1.819362, -0.3283002, -0.4837726, -1.248508};
   /* Testing the random projection generator */
@@ -404,9 +412,9 @@ int main(void) {
     }
     printf("\n");
     /* Testing data copying procedure */
-    dt = cpdt(N, X, D, Y, D, true);
+    dt = cpdt(wt, N, X, D, Y, D, true);
     free_data(dt, N);
-    dt = cpdt(N, X, D, Y, D, false);
+    dt = cpdt(wt, N, X, D, Y, D, false);
     if (dt) {
       /* Testing 1D projections */
       proj1d(dt, test, N, D);
@@ -447,13 +455,13 @@ int main(void) {
 	  printf("\n");
 	}
 	printf("S.E. of predictions\n");
-	for (i = 0; i < N; i++) {
-	  printf("SE (%lu): ", i);
-	  for (j = 0; j < D; j++) {
-	    printf("%.4f ", dt[i].s[j]);
-	  }
-	  printf("\n");
-	}
+        for (i = 0; i < N; i++) {
+          printf("SE (%lu): ", i);
+          for (j = 0; j < D; j++) {
+            printf("%.4f ", dt[i].s[j]);
+          }
+          printf("\n");
+        }
       }
       if (roots) free_root(roots, NT);
     }

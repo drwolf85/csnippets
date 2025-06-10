@@ -42,7 +42,7 @@ static inline double cfun(uint64_t n) {
  *
  * @return A pointer to a node structure
  */
-static inline node * alloc_node() {
+static inline node * alloc_node(void) {
 	node *n = (node *) calloc(1, sizeof(node));
 	return n;
 }
