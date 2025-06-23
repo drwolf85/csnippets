@@ -77,7 +77,7 @@ void cyclic_dbcd(double *param, int *len, int *d, int *n_iter, void *info,
     int t, i, k;
     unsigned np = *len;
     unsigned j = 0;
-    double newf, oldf = (double) INFINITY;
+    double newf, oldf, oldg = (double) INFINITY;
     double *desc = NULL;
     double *invh = NULL;
     int *idx = NULL;
@@ -90,14 +90,16 @@ void cyclic_dbcd(double *param, int *len, int *d, int *n_iter, void *info,
 	    invh = (double *) calloc(np, sizeof(double));
 	    if (idx && desc && invh) {
 		/* Compute the objective function */
+		oldf = oldg; 
 		newf = objf(param, len, info);
-		for (t = 0; t < *n_iter && newf < oldf; t++) {
+		for (t = 0; t < *n_iter && newf < oldg; t++) {
+		    oldg = newf;
 		    for (i = 0; i < *d; i++, j++) idx[i] = j % np; /* Populate the block */
                     for (k = 0; k < *n_iter && newf < oldf; k++) { /* wihtin block optim */
                         oldf = newf;
                         afd(desc, param, len, info, idx, d, objf);
 			asd(invh, param, len, info, idx, d, objf);
-			for (i = 0; i < *d; i++, j++) {
+			for (i = 0; i < *d; i++) {
 				desc[i] /= EPSILON + fabs(invh[i]);/**FIXME: needs a change*/
 				param[idx[i]] -= LEARNING_RATE * desc[i];
 			}
