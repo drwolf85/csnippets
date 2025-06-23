@@ -79,24 +79,24 @@ extern void min_within_simplex(double *w, unsigned p, unsigned n_iter, void *inf
 			grad(grd_v, w, p, info); /* Compute the gradient */
 			for (i = 0; i < p; i++) grd_v[i] *= w[i] * (1.0 * w[i]);/* Adjust the gradient to account for the transformation performed at the next line */
 			conv_from_simplex(w, w, p); /* Convert vector from Simplex space to an Euclidean space */
-                for (i = 0; i < p; i++) { /* Lion descent step */
-                /* Lion update of custom momentum */
-                sgn = BETA_1 * mom_m[i] + (1.0 - BETA_1) * grd_v[i];
-                /* Update the momentum */
-                mom_m[i] *= BETA_2;
-                mom_m[i] +=  (1.0 - BETA_2) * grd_v[i];
-                /* Lion update */
-                sgn = (double) (sgn > 0.0) - (double) (sgn < 0.0);
-                /* Computing the step */
-                grd_v[i] = sgn + FACTOR_P * w[i];
-                grd_v[i] *= LEARNING_RATE;
+      for (i = 0; i < p; i++) { /* Lion descent step */
+        /* Lion update of custom momentum */
+        sgn = BETA_1 * mom_m[i] + (1.0 - BETA_1) * grd_v[i];
+        /* Update the momentum */
+        mom_m[i] *= BETA_2;
+        mom_m[i] +=  (1.0 - BETA_2) * grd_v[i];
+        /* Lion update */
+        sgn = (double) (sgn > 0.0) - (double) (sgn < 0.0);
+        /* Computing the step */
+        grd_v[i] = sgn + FACTOR_P * w[i];
+        grd_v[i] *= LEARNING_RATE;
 				w[i] -= grd_v[i];
-            } /* End of Lion step */
+      } /* End of Lion step */
 			conv_to_simplex(w, w, p); /* Transform the unknowns back to the Simplex space*/
 		}
 	}
-    free(mom_m);
-    free(grd_v);
+  free(mom_m);
+	free(grd_v);
 }
 
 #ifdef DEBUG

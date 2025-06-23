@@ -13,13 +13,9 @@
  * */
 static inline size_t rbinom(size_t n, double prob) {
     size_t i;
-    unsigned long u;
-    unsigned long const m = ~(1 << 31);
     size_t z = 0;
     for (i = 0; i < n; i++) {
-        u = arc4random();
-        u &= m;
-        z += (size_t) (ldexp((double) u, -31) < prob);
+        z += (size_t) (ldexp((double) arc4random(), -32) < prob);
     }
     return z;
 }

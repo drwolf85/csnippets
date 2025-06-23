@@ -30,8 +30,9 @@ bool * systematic(double *pik, size_t N, size_t n) {
 		for (i = 0; i < N; i++) printf("%f ", pik[i]);
 		printf("\n");
 #endif
-		sm = 0.5 + (double) arc4random(); 
-		sm /= (double) (1ULL << 32ULL);
+/*		sm = 0.5 + (double) arc4random(); 
+		sm /= (double) (1ULL << 32ULL); */
+		sm = ldexp((double) arc4random(), -32);
 		a = -sm;
 		for (i = 0; i < N; i++) {
 			b = a;

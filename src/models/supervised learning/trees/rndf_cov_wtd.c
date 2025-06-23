@@ -65,53 +65,53 @@ static inline void free_root(node *nd, size_t n_nodes) {
  * @return The pointers to the Lower and Upper matrices
  */
 double ** LUdec(double *A, size_t n) {
-    double **LU = NULL;
-    double tmp;
-    bool both = true;
-    size_t i, j, k;
-    double *a = (double *) malloc(n * n * sizeof(double));
-    LU = (double **) calloc(2, sizeof(double *));
-    if (__builtin_expect(LU && a, 1)) {
-        for (i = 0; i < 2; i++) {
-            LU[i] = (double *) calloc(n * n, sizeof(double));
-            both = both && (bool) LU[i];
+  double **LU = NULL;
+  double tmp;
+  bool both = true;
+  size_t i, j, k;
+  double *a = (double *) malloc(n * n * sizeof(double));
+  LU = (double **) calloc(2, sizeof(double *));
+  if (__builtin_expect(LU && a, 1)) {
+    for (i = 0; i < 2; i++) {
+      LU[i] = (double *) calloc(n * n, sizeof(double));
+      both = both && (bool) LU[i];
+    }
+    if (__builtin_expect(both, 1)) {
+      memcpy(a, A, n * n * sizeof(double));
+      /* Initialize the diagonal of the matrix L */
+      for (i = 0; i < n; i++) {
+          LU[0][i * (n + 1)] = 1.0;
+      }
+      for (k = 0; k < n; k++) {
+      	tmp = a[k * (n + 1)]; /* Compute the pivots (diagonal of U) */
+        LU[1][k * (n + 1)] = tmp;
+      	if (__builtin_expect(tmp == 0.0, 0)) break;
+        for (i = k + 1; i < n; i++) { /* Gaussian elimination */
+          LU[0][k * n + i] = a[k * n + i] / tmp;
+          LU[1][i * n + k] = a[i * n + k];
         }
-        if (__builtin_expect(both, 1)) {
-            memcpy(a, A, n * n * sizeof(double));
-            /* Initialize the diagonal of the matrix L */
-            for (i = 0; i < n; i++) {
-                LU[0][i * (n + 1)] = 1.0;
-            }
-            for (k = 0; k < n; k++) {
-		tmp = a[k * (n + 1)]; /* Compute the pivots (diagonal of U) */
-                LU[1][k * (n + 1)] = tmp;
-		if (__builtin_expect(tmp == 0.0, 0)) break;
-                for (i = k + 1; i < n; i++) { /* Gaussian elimination */
-                    LU[0][k * n + i] = a[k * n + i] / tmp;
-                    LU[1][i * n + k] = a[i * n + k];
-                }
-                for (i = k + 1; i < n; i++) { /* Compute the Schur complement */
-                    for (j = k + 1; j < n; j++) {
-                        a[j * n + i] -= LU[0][n * k + i] * LU[1][n * j + k];
-                    }
-                }
-            }
+        for (i = k + 1; i < n; i++) { /* Compute the Schur complement */
+          for (j = k + 1; j < n; j++) {
+            a[j * n + i] -= LU[0][n * k + i] * LU[1][n * j + k];
+          }
+        }
+      }
 #ifdef DEBUG
 #if DEBUG == 3
-	    for (i = 0; i < n; i++) {
-	      printf("%f ", LU[1][(n + 1) * i]);
-	    }
-	    printf("\n\n");
+      for (i = 0; i < n; i++) {
+        printf("%f ", LU[1][(n + 1) * i]);
+      }
+      printf("\n\n");
 #endif
 #endif
-        }
-        else {
-           for (i = 0; i < 2; i++) if (__builtin_expect(LU[i] != NULL, 1)) free(LU[i]);
-           if (__builtin_expect(LU != NULL, 1)) free(LU);
-        }
     }
-    if (__builtin_expect(a != NULL, 1)) free(a);
-    return LU;
+    else {
+      for (i = 0; i < 2; i++) if (__builtin_expect(LU[i] != NULL, 1)) free(LU[i]);
+      if (__builtin_expect(LU != NULL, 1)) free(LU);
+    }
+  }
+  if (__builtin_expect(a != NULL, 1)) free(a);
+  return LU;
 }
 
 /**
@@ -215,17 +215,17 @@ static inline void proj1d(data *dt, double *p, size_t n, size_t dx) {
   if (__builtin_expect(dt && p, 1)) {
     for (i = 0; i < n; i++) {
       if (__builtin_expect(dt[i].x && dt[i].y, 1)) {
-	dt[i].pj = 0.0;
-	nf = 0;
-	for (j = 0; j < dx; j++) {
-	  if (__builtin_expect(isfinite(dt[i].x[j]), 1)) {
-	    dt[i].pj += dt[i].x[j] * p[j];
-	    nf++;
-	  }
-	}
-	if (__builtin_expect(nf > 0 && nf < dx, 0)) {
-	  dt[i].pj *= (double) dx / (double) nf;
-	}
+      	dt[i].pj = 0.0;
+      	nf = 0;
+      	for (j = 0; j < dx; j++) {
+      	  if (__builtin_expect(isfinite(dt[i].x[j]), 1)) {
+      	    dt[i].pj += dt[i].x[j] * p[j];
+      	    nf++;
+      	  }
+      	}
+      	if (__builtin_expect(nf > 0 && nf < dx, 0)) {
+      	  dt[i].pj *= (double) dx / (double) nf;
+      	}
       }
     }
   }
@@ -254,15 +254,15 @@ static int cmp_prj(void const *aa, void const *bb) {
  * @return double
  */
 static inline double rtriang(double mu, double sd) {
-   uint64_t u, v;
-   double a, b;
-   u = v = arc4random();
-   u <<= 32ULL;
-   u |= arc4random();
-   v |= (u << 32ULL);
-   a = ldexp((double) u, -64);
-   b = ldexp((double) v, -64);
-   return (a - b) * sd + mu;
+  uint64_t u, v;
+  double a, b;
+  u = v = arc4random();
+  u <<= 32ULL;
+  u |= arc4random();
+  v |= (u << 32ULL);
+  a = ldexp((double) u, -64);
+  b = ldexp((double) v, -64);
+  return (a - b) * sd + mu;
 }
 
 /**
@@ -297,8 +297,8 @@ static inline void free_data(data *dt, size_t n) {
   size_t i;
   if (__builtin_expect(dt != NULL, 1)) {
     for (i = 0; i < n; i++) {
-	    if (dt[i].x) free(dt[i].x);
-	    if (dt[i].y) free(dt[i].y);
+      if (dt[i].x) free(dt[i].x);
+      if (dt[i].y) free(dt[i].y);
     }
     free(dt);
   }
@@ -326,10 +326,10 @@ static inline data * cpdt(size_t n, double *X, size_t dx, double *Y, size_t dy, 
       dt[i].y = calloc(dy, sizeof(double));
       dt[i].i = i;
       if (dt[i].x && dt[i].y) { 
-	nc++;
-	if (cmf) {
-	  for (j = 0; j < dx; j++) dt[i].x[j] = X[n * j + i];
-	  for (j = 0; j < dy; j++) dt[i].y[j] = Y[n * j + i];
+        nc++;
+        if (cmf) {
+      	  for (j = 0; j < dx; j++) dt[i].x[j] = X[n * j + i];
+      	  for (j = 0; j < dy; j++) dt[i].y[j] = Y[n * j + i];
         }
         else {
           memcpy(dt[i].x, &X[dx * i], dx * sizeof(double));
@@ -372,24 +372,24 @@ extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_
       root->nz = (size_t *) calloc(dy * dy, sizeof(size_t));
       if (__builtin_expect(root->pred && root->cov && root->nz, 1)) {
         for (cnt = 0; cnt < n; cnt++) {
-	  for (i = 0; i < dy; i++) {
-	    if (__builtin_expect(isfinite(dt[cnt].y[i]), 1)) { 
-	      root->pred[i] += dt[cnt].y[i];
-	      pos = (dy + 1) * i;
-	      root->cov[pos] += dt[cnt].y[i] * dt[cnt].y[i];
-	      root->nz[pos]++;
-	      for (j = i + 1; j < dy; j++) {
+      	  for (i = 0; i < dy; i++) {
+      	    if (__builtin_expect(isfinite(dt[cnt].y[i]), 1)) { 
+      	      root->pred[i] += dt[cnt].y[i];
+      	      pos = (dy + 1) * i;
+      	      root->cov[pos] += dt[cnt].y[i] * dt[cnt].y[i];
+      	      root->nz[pos]++;
+      	      for (j = i + 1; j < dy; j++) {
 		if (__builtin_expect(isfinite(dt[cnt].y[j]), 1)) {
 		  pos = dy * i + j;
 		  sop = dy * j + i;
-	      	  root->cov[pos] += dt[cnt].y[i] * dt[cnt].y[j];
+		  root->cov[pos] += dt[cnt].y[i] * dt[cnt].y[j];
 		  root->cov[sop] = root->cov[pos];
 		  root->nz[pos]++;
-	      	  root->nz[sop] = root->nz[pos];
+		  root->nz[sop] = root->nz[pos];
 		}
-	      }
-	    }
-	  }
+      	      }
+      	    }
+      	  }
         }
 #ifdef DEBUG
 #if DEBUG == 2
@@ -397,26 +397,25 @@ extern void rnd_tree(node *root, data *dt, size_t n, size_t dx, size_t dy, size_
 #endif
 #endif
         for (i = 0; i < dy; i++) {
-	  pos = i * (dy + 1);
+      	  pos = i * (dy + 1);
           root->pred[i] /= root->nz[pos];
-	  root->cov[pos] -= root->pred[i] * root->pred[i] * (double) root->nz[pos];
-	  root->cov[pos] /= (double) (root->nz[pos] - (size_t) (root->nz[pos] > 1));
-	  /* Regularization term to avoid possible singularity issues */
-	  root->cov[pos] += lambda;
-
+      	  root->cov[pos] -= root->pred[i] * root->pred[i] * (double) root->nz[pos];
+      	  root->cov[pos] /= (double) (root->nz[pos] - (size_t) (root->nz[pos] > 1));
+      	  /* Regularization term to avoid possible singularity issues */
+      	  root->cov[pos] += lambda;
 #ifdef DEBUG
 #if DEBUG == 2
-	  printf("%s%.2f (%.2f|%lu) ", root->pred[i] >= 0.0 ? " " : "", \
-			  root->pred[i], root->cov[pos], root->nz[pos]);
+      	  printf("%s%.2f (%.2f|%lu) ", root->pred[i] >= 0.0 ? " " : "", \
+                                			 root->pred[i], root->cov[pos], root->nz[pos]);
 #endif
 #endif
-	  for (j = 0; j < i; j++) {
-	    pos = dy * i + j;
-	    sop = dy * j + i;
-	    root->cov[pos] -= root->pred[i] * root->pred[j] * (double) root->nz[pos];
-	    root->cov[pos] /= (double) (root->nz[pos] - (size_t) (root->nz[pos] > 1));
-	    root->cov[sop] = root->cov[pos];
-	  }
+      	  for (j = 0; j < i; j++) {
+      	    pos = dy * i + j;
+      	    sop = dy * j + i;
+      	    root->cov[pos] -= root->pred[i] * root->pred[j] * (double) root->nz[pos];
+      	    root->cov[pos] /= (double) (root->nz[pos] - (size_t) (root->nz[pos] > 1));
+      	    root->cov[sop] = root->cov[pos];
+      	  }
         }
 #ifdef DEBUG
 #if DEBUG == 2
@@ -450,31 +449,31 @@ extern void rf_predict(node *root, size_t nt, data *dt, size_t n, size_t dx, siz
       for (t = 0; t < nt; t++) {
         T = &root[t];
         while (__builtin_expect(T->nl > 0, 1)) {
-	  pj = proj2dbl(&dt[i], T->prj, dx);
-	  T = pj <= T->spl ? &T->lf[0] : &T->lf[1];
+      	  pj = proj2dbl(&dt[i], T->prj, dx);
+      	  T = pj <= T->spl ? &T->lf[0] : &T->lf[1];
         }
-	if (__builtin_expect(T->pred && T->cov, 1)) {
+      	if (__builtin_expect(T->pred && T->cov, 1)) {
 #ifdef DEBUG
 #if DEBUG == 3
-	  for (j = 0; j < dy * dy; j++) {
-            printf("%f ", T->cov[j]);
-	    if ((j + 1) % dy == 0) printf("\n");
-	  }
-	  printf("\n");
+      	  for (j = 0; j < dy * dy; j++) {
+                  printf("%f ", T->cov[j]);
+      	    if ((j + 1) % dy == 0) printf("\n");
+      	  }
+      	  printf("\n");
 #endif
 #endif
-	  pj = det(T->cov, dy);
-	  /* If the determinant is not finite then process the next tree model */
-	  if (__builtin_expect(!isfinite(pj), 0)) continue;
-	  /* If covariance matrix is not positive definite, use max of its diag. */
-	  if (__builtin_expect(pj <= 0.0, 0)) {
-	    pj = 0.0;
-	    for (j = 0; j < dy; j++) pj = fmax(pj, T->cov[j * (dy + 1)]);
-	  }
-	  pj = 1.0 / pj;
-	  invnt += pj;
-	  for (j = 0; j < dy; j++) dt[i].y[j] += T->pred[j] * pj;
-	}
+      	  pj = det(T->cov, dy);
+      	  /* If the determinant is not finite then process the next tree model */
+      	  if (__builtin_expect(!isfinite(pj), 0)) continue;
+      	  /* If covariance matrix is not positive definite, use max of its diag. */
+      	  if (__builtin_expect(pj <= 0.0, 0)) {
+      	    pj = 0.0;
+      	    for (j = 0; j < dy; j++) pj = fmax(pj, T->cov[j * (dy + 1)]);
+      	  }
+      	  pj = 1.0 / pj;
+      	  invnt += pj;
+      	  for (j = 0; j < dy; j++) dt[i].y[j] += T->pred[j] * pj;
+      	}
       }
       invnt = 1.0 / invnt;
       for (j = 0; j < dy; j++) dt[i].y[j] *= invnt;
@@ -521,7 +520,7 @@ int main(void) {
       printf("Spl Cnt: %lu\n", i);
       printf("D1D RPj: ");
       for (i = 0; i < N; i++) {
-	printf("%s%f ", dt[i].pj >= 0.0 ? " " : "", dt[i].pj);
+      	printf("%s%f ", dt[i].pj >= 0.0 ? " " : "", dt[i].pj);
       }
       printf("\n");
       printf("Rnd SPL: %f\n", rsp);
@@ -529,30 +528,30 @@ int main(void) {
       printf("\n");
       roots = alloc_nodes(NT);
       if (roots) {
-	for (i = 0; i < NT; i++) { /* This loop builds a forest */
+      	for (i = 0; i < NT; i++) { /* This loop builds a forest */
           rnd_tree(&roots[i], dt, N, D, D, K, ML, 0.001);
 #if DEBUG == 2
-	  printf("\n");
+      	  printf("\n");
 #endif
-	}
-	/* Testing random forest predictions */
-	printf("Before predicting\n");
-	for (i = 0; i < N; i++) {
-	  printf("Prd (%lu): ", i);
-	  for (j = 0; j < D; j++) {
-	    printf("%s%.3f ", dt[i].y[j] >= 0.0 ? " " : "", dt[i].y[j]);
-	  }
-	  printf("\n");
-	}
+      	}
+      	/* Testing random forest predictions */
+      	printf("Before predicting\n");
+      	for (i = 0; i < N; i++) {
+      	  printf("Prd (%lu): ", i);
+      	  for (j = 0; j < D; j++) {
+      	    printf("%s%.3f ", dt[i].y[j] >= 0.0 ? " " : "", dt[i].y[j]);
+      	  }
+      	  printf("\n");
+      	}
         rf_predict(roots, NT, dt, N, D, D);
-	printf("After predicting\n");
-	for (i = 0; i < N; i++) {
-	  printf("Prd (%lu): ", i);
-	  for (j = 0; j < D; j++) {
-	    printf("%s%.3f ", dt[i].y[j] >= 0.0 ? " " : "", dt[i].y[j]);
-	  }
-	  printf("\n");
-	}
+      	printf("After predicting\n");
+      	for (i = 0; i < N; i++) {
+      	  printf("Prd (%lu): ", i);
+      	  for (j = 0; j < D; j++) {
+      	    printf("%s%.3f ", dt[i].y[j] >= 0.0 ? " " : "", dt[i].y[j]);
+      	  }
+      	  printf("\n");
+      	}
       }
       if (roots) free_root(roots, NT);
     }
