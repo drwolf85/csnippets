@@ -4,7 +4,10 @@
 #include <string.h>
 #include <math.h>
 
-#define EPS_TOLL 1e-15
+/* Rayleigh Quotient Method to Compute the Eigenvector Associated with the Largest Eigenvalues of a Symmetric Positive-Definite Matrix */
+
+#define EPS_TOLL_MAX 1e-8
+#define EPS_TOLL_MIN 1e-16
 
 /**
  * It computes the outer product of a triangular matrix with itself
@@ -181,6 +184,14 @@ static inline void mat_dot_vec(double *y, double *iA, double *x, size_t n) {
     }
 }
 
+static inline void sqr_norm(double *x, size_t n) {
+    double tmp = 0.0;
+    size_t i;
+    for (i = 0; i < n; i++) tmp += x[i] * x[i];
+    tmp = 1.0 / sqrt(tmp);
+    for (i = 0; i < n; i++) x[i] *= tmp;
+}
+
 /**
  * @brief Rayleigh Quotient Iteration Return one eigenvector
  * 
@@ -202,7 +213,23 @@ extern double * rayleigh_quotient_iteration(double *A, size_t n) {
         iA = (double *) malloc(nn * sizeof(double));
         if (__builtin_expect(x && y && iA, 1)) {
             memcpy(iA, A, sizeof(double) * nn);
-            for (i = 0; i < n; i++) x[i] = runif(-1.0, 1.0);
+            for (i = 0; i < n; i++) x[i] = runif(0.0, 1.0);
+            /* Normalized iterative power method */
+            do {
+                mat_dot_vec(y, iA, x, n);
+                imax = 1.0 / vmax(y, n);
+                /* Update the vector and compute the convergence rate/error rate */
+                sigma = *y * imax;
+                err = fabs(*x - sigma);
+                *x = sigma;
+                for (i = 1; i < n; i++) {
+                    sigma = y[i] * imax;
+                    err += fabs(x[i] - sigma);
+                    x[i] = sigma;
+                }
+                err /= (double) n;
+            } while (err > EPS_TOLL_MAX);
+            /* Rayleigh quotient method */
             do {
                 sigma = ratio_quad_forms(x, A, n); /* Rayleigh Quotient (a.k.a. the shift) */
                 for (i = 0; i < n; i++) iA[i * (n + 1)] = A[i * (n + 1)] - sigma; /* Fixing diagonal of `iA` */
@@ -222,8 +249,9 @@ extern double * rayleigh_quotient_iteration(double *A, size_t n) {
                 }
                 err /= (double) n;
                 memcpy(iA, A, sizeof(double) * nn); /* Replacing `iA` with `A`*/
-            } while(err > EPS_TOLL);
+            } while(err > EPS_TOLL_MIN);
         }
+        sqr_norm(x, n);
         if (__builtin_expect(iA != NULL, 1)) free(iA);
         if (__builtin_expect(y != NULL, 1)) free(y);
     }
